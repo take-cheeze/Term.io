@@ -105,13 +105,13 @@
 			return array.slice(0, index).concat(replacement).concat(array.slice(index + replacement.length));
 		};
 
-		self.lowLevelReplaceChar = function(position, ach) {
+		self.replaceChar = function(position, ach) {
 			self.ensureLineExists(position.y);
 			self.grid[position.y] = self.replaceInArray(self.grid[position.y], position.x, [ach]);
 			self.dirtyLines[position.y] = true;
 		};
 
-		self.lowLevelSetCursor = function(newPosition) {
+		self.setCursor = function(newPosition) {
 			self.dirtyLines[self.cursor.y] = true;
 			if (newPosition.x !== undefined) {
 				self.cursor.x = (newPosition.x < 0) ? 0 : newPosition.x;
@@ -129,34 +129,22 @@
 			self.ensureColumnExists(self.cursor);
 		};
 
-		self.lowLevelMoveCursor = function(direction) {
-			self.lowLevelSetCursor({
+		self.moveCursor = function(direction) {
+			self.setCursor({
 				x: self.cursor.x + (direction.x || 0),
 				y: self.cursor.y + (direction.y || 0)
 			});
 		};
 
 		self.enterChar = function(ch) {
-			self.lowLevelReplaceChar(self.cursor, [self.cursor.attr, ch]);
-			self.lowLevelMoveCursor({ x: 1 });
-		};
-
-		self.backSpace = function() {
-			self.lowLevelMoveCursor({ x: -1 });
-		};
-
-		self.carrigeReturn = function() {
-			self.lowLevelSetCursor({ x: 0 });
-		};
-
-		self.lineFeed = function() {
-			self.lowLevelMoveCursor({ y: 1 });
+			self.replaceChar(self.cursor, [self.cursor.attr, ch]);
+			self.moveCursor({ x: 1 });
 		};
 
 		self.nextTabStop = function() {
 			var position = self.cursor.x;
 			position = (position | 7) + 1; // 8 characters tab stop
-			self.lowLevelSetCursor({ x: position });
+			self.setCursor({ x: position });
 			// TODO: Use dynamic tab stops and recognize CSI * g and ESC H.
 		};
 
@@ -193,15 +181,15 @@
 					'C': { x:  arg },
 					'D': { x: -arg }
 				};
-				self.lowLevelMoveCursor(directions[command]);
+				self.moveCursor(directions[command]);
 			} else if (command === 'G') {
 				var arg = parseInt(args[0] || '0', 10) || 0;
 				if (arg < 0) { arg = 0; }
-				self.lowLevelSetCursor({ x: arg });
+				self.setCursor({ x: arg });
 			} else if (command === 'H' || command === 'f') {
 				var y = (parseInt(args[0] || '1', 10) || 1) - 1;
 				var x = (parseInt(args[1] || '1', 10) || 1) - 1;
-				self.lowLevelSetCursor({ x: x, y: y + self.windowFirstLine() });
+				self.setCursor({ x: x, y: y + self.windowFirstLine() });
 			} else if (command === 'J') {
 				var arg = parseInt(args[0] || '0', 10) || 0;
 				var cols = (self.columns || noop)() || self.cursor.x + 1;
@@ -217,7 +205,7 @@
 				} else {
 					firstLine = lastLine;
 					lastLine  = firstLine + rows - 1;
-					self.lowLevelSetCursor({ y: firstLine });
+					self.setCursor({ y: firstLine });
 				}
 				var emptyLine = self.emptyLineArray(cols);
 				for (var y = firstLine; y <= lastLine; y++) {
@@ -342,13 +330,13 @@
 					if (ch === '\u0007') {
 						(self.bell || noop)();
 					} else if (ch === '\b') {
-						self.backSpace();
+						self.moveCursor({ x: -1 });
 					} else if (ch === '\t') {
 						self.nextTabStop();
 					} else if (ch === '\r') {
-						self.carrigeReturn();
+						self.setCursor({ x: 0 });
 					} else if (ch === '\n') {
-						self.lineFeed();
+						self.moveCursor({ y: 1 });
 					} else if (ch >= ' ') {
 						self.enterChar(ch);
 					} else if (window.console && window.JSON) {
@@ -439,48 +427,34 @@
 			var ctrl  = e.ctrlKey;
 			var meta  = e.altKey;
 			var mods   = shift || ctrl || meta;
-			var onlyShift = shift && !( ctrl || meta);
 			var onlyCtrl  = ctrl  && !(shift || meta);
-			var onlyMeta  = meta  && !(shift || ctrl);
 			var ctrlShift = ctrl  && shift && !meta;
 			//console.log('keydown... ' + e.keyCode, shift, ctrl, meta);
 			if (!mods && (e.keyCode === 8 || e.keyCode === 9 || e.keyCode === 27)) {
 				var ch = String.fromCharCode(e.keyCode);
 				(self.oninput || noop)(ch);
-				e.preventDefault();
-				return false;
 			} else if (!mods && e.keyCode === 37) { // Left arrow
 				(self.oninput || noop)('\u001B[D');
-				e.preventDefault();
-				return false;
 			} else if (!mods && e.keyCode === 38) { // Up arrow
 				(self.oninput || noop)('\u001B[A');
-				e.preventDefault();
-				return false;
 			} else if (!mods && e.keyCode === 39) { // Right arrow
 				(self.oninput || noop)('\u001B[C');
-				e.preventDefault();
-				return false;
 			} else if (!mods && e.keyCode === 40) { // Down arrow
 				(self.oninput || noop)('\u001B[B');
-				e.preventDefault();
-				return false;
 			} else if (onlyCtrl && e.keyCode >= 65 && e.keyCode <= 90) { // Ctrl + A-Z
 				var ch = String.fromCharCode(e.keyCode - 64);
 				(self.oninput || noop)(ch);
-				e.preventDefault();
-				return false;
 			} else if (ctrlShift && e.keyCode === 84) {
 				window.open(location.href);
-				e.preventDefault();
-				return false;
 			} else if (ctrlShift && e.keyCode === 87) {
 				window.close();
-				e.preventDefault();
-				return false;
 			} else if (window.console) {
 				//console.log('Unhandled keydown ' + e.keyCode);
+				return;
 			}
+			// event was handled
+			e.preventDefault();
+			return false;
 		});
 		self.terminalInputElement.keypress(function(e) {
 			//console.log('keypress... ' + e.keyCode);
@@ -492,9 +466,6 @@
 			}
 			e.preventDefault();
 			return false;
-		});
-		self.terminalInputElement.keyup(function(e) {
-			//console.log('keyup... ' + e.keyCode);
 		});
 
 		self.applyTerminalCss = function(css) {
@@ -610,7 +581,7 @@
 			}
 			return cachedCharacterHeight;
 
-			/* OLD WAY TO DO IT (is it slower?)
+			/* OLD WAY TO DO IT (is it selfer?)
 			var lines  = self.numberOfLines();
 			var height = self.height();
 			return (height / lines) || 1;
