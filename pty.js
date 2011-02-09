@@ -3,6 +3,8 @@ var http = require('http');
 var fs = require('fs');
 var crypto = require('crypto');
 
+var connect = require('connect');
+
 function wsHandshake(request, head) {
 	var md5 = crypto.createHash('md5');
 	var k1 = request.headers['sec-websocket-key1'];
@@ -26,37 +28,19 @@ function wsHandshake(request, head) {
 	return md5.digest('binary');	
 };
 
-var server = http.createServer();
-
-server.on('request', function(request, response) {
-	var filename = null;
-	var type = 'text/plain; charset=utf-8';
-	if (request.url === '/') {
-		filename = './terminal.html';
-		type = 'text/html; charset=utf-8';
-	} else if (request.url === '/jquery-1.4.4.min.js' || request.url === '/termemul.js') {
-		filename = '.' + request.url;
-		type = 'text/javascript; charset=utf-8';
-	} else if (request.url === '/favicon.ico') {
-		filename = './favicon.ico';
-		type = 'image/vnd.microsoft.icon';
-	} else if (request.url === '/flashbeep-general.swf') {
-		filename = './flashbeep-general.swf';
-		type = 'application/x-shockwave-flash';
+var server = connect.createServer(
+    connect.staticProvider(__dirname + '/static'),
+	function(request, response) {
+		fs.readFile('./terminal.html', function(err, buffer) {
+			console.log('./terminal.html' + ': ' + buffer.length + ' bytes');
+			response.writeHead(200, {
+				'Content-Length': buffer.length,
+				'Content-Type': 'text/html; charset=utf-8'
+			});
+			response.end(buffer);
+		})
 	}
-	if(!filename) {
-		filename = './terminal.html';
-		type = 'text/html; charset=utf-8';		
-	}
-	fs.readFile(filename, function(err, buffer) {
-		//console.log(filename + ': ' + buffer.length + ' bytes');
-		response.writeHead(200, {
-			'Content-Length': buffer.length,
-			'Content-Type': type
-		});
-		response.end(buffer);
-	});
-});
+);
 
 var ptys = {};
 
