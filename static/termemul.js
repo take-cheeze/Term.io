@@ -262,6 +262,9 @@
 					console.log('Unknown argument for CSI "l": ' + JSON.stringify(arg));
 				}
 			} else if (command === 'm') {
+				if(args.length == 0){
+					args = [0]
+				}
 				for (var i = 0; i < args.length; i++) {
 					var arg = parseInt(args[i], 10);
 					if (arg === 0) {
