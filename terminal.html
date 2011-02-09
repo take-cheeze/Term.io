@@ -48,7 +48,16 @@
 						//console.log('send ' + JSON.stringify(data));
 						ws.send(data);
 					};
-
+					
+					//TODO: Make work cross-browser
+					catchPaste = function(e) {
+						e.stopPropagation();
+						e.preventDefault();
+						var data = e.originalEvent.clipboardData.getData('text/plain')
+						ws.send(data);
+					}
+					$("body").bind('paste', catchPaste );
+					
 					clearInterval(keepalive);
 					keepalive = setInterval(function() {
 						ws.send(''); // Connection keep-alive packet every 10 second.
@@ -75,6 +84,5 @@
 			<param name="movie" value="flashbeep-general.swf" />
 			<param name="FlashVars" value="onLoad=isReady" />
 		</object>
-		<!-- maybe use textarea for keyboard input: paste text, possible to use Ctrl+Alt+Shift+U in Linux, and other stuff?? ... -->
 	</body>
 </html>
