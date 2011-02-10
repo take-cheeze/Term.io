@@ -429,27 +429,27 @@
 			var mods   = shift || ctrl || meta;
 			var onlyCtrl  = ctrl  && !(shift || meta);
 			var ctrlShift = ctrl  && shift && !meta;
-			//console.log('keydown... ' + e.keyCode, shift, ctrl, meta);
-			if (!mods && (e.keyCode === 8 || e.keyCode === 9 || e.keyCode === 27)) {
-				var ch = String.fromCharCode(e.keyCode);
+			//console.log('keydown... ' + e.which, shift, ctrl, meta);
+			if (!mods && (e.which === 8 || e.which === 9 || e.which === 27)) {
+				var ch = String.fromCharCode(e.which);
 				(self.oninput || noop)(ch);
-			} else if (!mods && e.keyCode === 37) { // Left arrow
+			} else if (!mods && e.which === 37) { // Left arrow
 				(self.oninput || noop)('\u001B[D');
-			} else if (!mods && e.keyCode === 38) { // Up arrow
+			} else if (!mods && e.which === 38) { // Up arrow
 				(self.oninput || noop)('\u001B[A');
-			} else if (!mods && e.keyCode === 39) { // Right arrow
+			} else if (!mods && e.which === 39) { // Right arrow
 				(self.oninput || noop)('\u001B[C');
-			} else if (!mods && e.keyCode === 40) { // Down arrow
+			} else if (!mods && e.which === 40) { // Down arrow
 				(self.oninput || noop)('\u001B[B');
-			} else if (onlyCtrl && e.keyCode >= 65 && e.keyCode <= 90) { // Ctrl + A-Z
-				var ch = String.fromCharCode(e.keyCode - 64);
+			} else if (onlyCtrl && e.which >= 65 && e.which <= 90) { // Ctrl + A-Z
+				var ch = String.fromCharCode(e.which - 64);
 				(self.oninput || noop)(ch);
-			} else if (ctrlShift && e.keyCode === 84) {
+			} else if (ctrlShift && e.which === 84) {
 				window.open(location.href);
-			} else if (ctrlShift && e.keyCode === 87) {
+			} else if (ctrlShift && e.which === 87) {
 				window.close();
 			} else if (window.console) {
-				//console.log('Unhandled keydown ' + e.keyCode);
+				//console.log('Unhandled keydown ' + e.which);
 				return;
 			}
 			// event was handled
@@ -457,8 +457,8 @@
 			return false;
 		});
 		self.terminalInputElement.keypress(function(e) {
-			//console.log('keypress... ' + e.keyCode);
-			var ch = String.fromCharCode(e.keyCode);
+			//console.log('keypress... ' + e.which);
+			var ch = String.fromCharCode(e.which);
 			if (ch === '\r' || ch >= ' ') {
 				(self.oninput || noop)(ch);
 			} else if (window.console && window.JSON) {
