@@ -39,7 +39,7 @@ io.on('connection', function(client){
 			var pty = ptys[path];
 			var term = pty.term
 			term.stdout.on('data', function(data) {
-				client.send(data);
+				client.send(data.toString());
 			});
 			
 			term.on('exit', function() {
