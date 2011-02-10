@@ -25,12 +25,37 @@
 			}
 		</style>
 		<script src='jquery-1.5.min.js'></script>
+		<script src='socket.io.js'></script>
 		<script src='termemul.js'></script>
 		<script>
 			$(function() {
 				var term = termemul.JQueryTerminal('#terminal');
 				term.theme(term.themes['Tango']);
 				term.write('Welcome to the rabbit hole…\r\n\r\n');
+
+				socket = new io.Socket('localhost');
+				socket.connect();
+				i = 0
+				socket.on('connect', function(){
+					socket.send(location.pathname);
+				    term.oninput = function(data) {
+						socket.send(data);
+					};
+					catchPaste = function(e) {
+						e.stopPropagation();
+						e.preventDefault();
+						var data = e.originalEvent.clipboardData.getData('text/plain')
+						socket.send(data);
+					}
+					$("body").bind('paste', catchPaste );
+				});
+				socket.on('message', function(data){
+				    term.write(data);
+				});
+				socket.on('close',function() {
+					term.oninput = null;
+					term.write('\r\n\n\u001B[0;1mCONNECTION CLOSED. \u001B[0m');
+				})
 
 			/*
 				// Simple echo terminal
@@ -39,41 +64,6 @@
 					term.write(data.replace('\r', '\r\n> ').replace('\b', '\b \b'));
 				};
 			*/
-
-				// Online terminal
-				var ws = new WebSocket('ws://' + location.host + location.pathname);
-				var keepalive = null;
-				ws.onopen = function() {
-					term.oninput = function(data) {
-						//console.log('send ' + JSON.stringify(data));
-						ws.send(data);
-					};
-					
-					//TODO: Make work cross-browser
-					catchPaste = function(e) {
-						e.stopPropagation();
-						e.preventDefault();
-						var data = e.originalEvent.clipboardData.getData('text/plain')
-						ws.send(data);
-					}
-					$("body").bind('paste', catchPaste );
-					
-					clearInterval(keepalive);
-					keepalive = setInterval(function() {
-						ws.send(''); // Connection keep-alive packet every 10 second.
-					}, 30000);
-				};
-				ws.onclose = function() {
-					clearInterval(keepalive);
-					keepalive = null;
-
-					term.oninput = null;
-					term.write('\r\n\n\u001B[0;1mCONNECTION CLOSED. \u001B[0m');
-				};
-				ws.onmessage = function(e) {
-					//console.log('recieve ' + JSON.stringify(e.data));
-					term.write(e.data);
-				};
 
 			});
 		</script>
