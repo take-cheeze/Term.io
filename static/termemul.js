@@ -116,14 +116,15 @@
 			self.dirtyLines[self.cursor.y] = true;
 			if (newPosition.x !== undefined) {
 				self.cursor.x = (newPosition.x < 0) ? 0 : newPosition.x;
-				var cols = (self.columns || noop)() || 500;
-				if (self.cursor.x > cols - 1) {
-					self.cursor.x = cols - 1;
-				}
-				// TODO: Check that cursor is not going out of boundaries (x too large).
 			}
 			if (newPosition.y !== undefined) {
-				self.cursor.y = (newPosition.y < 0) ? 0 : newPosition.y; // TODO: Maybe the smallest y-position if windowFirstLine ?
+				self.cursor.y = (newPosition.y < 0) ? 0 : newPosition.y;
+			}
+			self.ensureLineExists(self.cursor.y);
+			var cols = (self.columns || noop)() || 500;
+			if(self.cursor.x > cols){
+				self.cursor.x = 0;
+				self.cursor.y++;
 			}
 			self.dirtyLines[self.cursor.y] = true;
 			self.ensureLineExists(self.cursor.y);
@@ -612,9 +613,11 @@
 
 		var cachedColumns = null;
 		self.columns = function() {
-			if (!cachedColumns) {
-				cachedColumns = Math.floor($(window).width()  / self.characterWidth());
-			}
+			// FIXME
+			// if (!cachedColumns) {
+			//    cachedColumns = Math.floor($(window).width() / self.characterWidth());
+			// }
+			cachedColumns = 80;
 			return cachedColumns;
 		};
 		self.term.columns = self.columns;
