@@ -11,9 +11,10 @@
 			onreset: null,
 			columns: null,
 			rows: null,
-			bell: null
+			bell: null,
+			appCursorKeys: false
 		};
-
+		
 		var noop = function() {};
 
 		self.attrToClass = function(attr) {
@@ -102,7 +103,7 @@
 		};
 */
 		self.replaceInArray = function(array, index, replacement) {
-			return array.slice(0, index).concat(replacement).concat(array.slice(index + replacement.length));
+			return array.slice(0, index).concat(replacement).concat(array.slice(index + replacement.length - 1));
 		};
 
 		self.replaceChar = function(position, ach) {
@@ -156,6 +157,7 @@
 			self.cursor.y = 0;
 			self.cursor.attr = 0x0088;
 			self.cursor.visible = true;
+			self.appCursorKeys = false;
 		};
 
 		self.escapeCodeESC = function(command) {
@@ -165,8 +167,10 @@
 				self.cursor.attr &= ~0x300; // <-- HACK SO `top` WORKS PROPERLY
 			} else {
 				console.log('Unhandled escape code ESC ' + JSON.stringify(command));
-				// Used by `less`: ESC =, ESC >
-				// Used by `reset`: ESC H, ESC >
+				// Used by 'vi': ESC 7,         Save Cursor
+				// Used by 'less','vi': ESC =,  Application Keypad (not implementing now - I don't have a keypad on laptop)
+				// Used by 'reset': ESC H,      Tab Set
+				// Used by 'less','reset' ESC > Normal Keypad (not implementing now - I don't have a keypad on laptop)
 			}
 		};
 				
@@ -234,15 +238,26 @@
 					self.dirtyLines[self.cursor.y] = true;
 				}
 			} else if (command === 'h') {
-				if (args[0] === '?25') {
+				arg = args[0];
+				if(arg === '?1'){
+					self.appCursorKeys = true;
+				}
+				else if (arg === '?25') {
 					self.cursor.visible = true;
-				} else {
-					console.log('Unknown argument for CSI "h": ' + JSON.stringify(args[0]));
+				} 
+				else {
+					console.log('Unknown argument for CSI "h": ' + JSON.stringify(arg));
+					// Used by vi, man ?47 - alternate screen buffer
 				}
 			} else if (command === 'l') {
-				if (args[0] === '?25') {
+				arg = args[0];
+				if(arg === '?1'){
+					self.appCursorKeys = false;
+				}
+				else if (arg === '?25') {
 					self.cursor.visible = false;
-				} else {
+				} 
+				else {
 					console.log('Unknown argument for CSI "l": ' + JSON.stringify(args[0]));
 				}
 			} else if (command === 'm') {
@@ -283,6 +298,7 @@
 				}
 			} else {
 				console.log('Unhandled escape code CSI ' + JSON.stringify(command) + ' ' + JSON.stringify(args));
+				//Used by 'vi' CSI r [x,y]  Set scrolling region defaults to whole screen
 			}
 		};
 
@@ -423,18 +439,21 @@
 			var onlyCtrl  = ctrl  && !(shift || meta);
 			var ctrlShift = ctrl  && shift && !meta;
 			//console.log('keydown... ' + e.which, shift, ctrl, meta);
+			var SS3Seq = '\u001BO';
+			var CSISeq = '\u001B[';
+			var arrowSeq = self.term.appCursorKeys ? SS3Seq : CSISeq;
 			if (!mods && (e.which === 8 || e.which === 9 || e.which === 27)) { //backspace tab esc
 				var ch = String.fromCharCode(e.which);
 				(self.oninput || noop)(ch);
 			} else if (!mods && e.which === 37) { // Left arrow
-				(self.oninput || noop)('\u001B[D');
+				(self.oninput || noop)(arrowSeq+'D');
 			} else if (!mods && e.which === 38) { // Up arrow
-				(self.oninput || noop)('\u001B[A');
+				(self.oninput || noop)(arrowSeq+'A');
 			} else if (!mods && e.which === 39) { // Right arrow
-				(self.oninput || noop)('\u001B[C');
+				(self.oninput || noop)(arrowSeq+'C');
 			} else if (!mods && e.which === 40) { // Down arrow
-				(self.oninput || noop)('\u001B[B');
-			} else if (onlyCtrl && e.which >= 65 && e.which <= 90) { // Ctrl + A-Z
+				(self.oninput || noop)(arrowSeq+'B');
+			} else if (onlyCtrl && e.which >= 65 && e.which <= 90) { // make Ctrl + A-Z work for lowercase
 				(self.oninput || noop)(String.fromCharCode(e.which - 64));
 			} else if (ctrlShift && e.which === 84) { // Ctrl Shift t to open  new tab
 				window.open(location.href);
@@ -451,11 +470,7 @@
 		self.terminalInputElement.keypress(function(e) {
 			//console.log('keypress... ' + e.which);
 			var ch = String.fromCharCode(e.which);
-			if (ch === '\r' || ch >= ' ') {
-				(self.oninput || noop)(ch);
-			} else {
-				console.log('Unhandled keypress ' + JSON.stringify(ch));
-			}
+			(self.oninput || noop)(ch);
 			e.preventDefault();
 			return false;
 		});
