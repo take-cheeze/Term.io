@@ -163,16 +163,17 @@
 				self.reset();
 			} else if (command === '(B') {
 				self.cursor.attr &= ~0x300; // <-- HACK SO `top` WORKS PROPERLY
-			} else if (window.console && window.JSON) {
+			} else {
 				console.log('Unhandled escape code ESC ' + JSON.stringify(command));
 				// Used by `less`: ESC =, ESC >
 				// Used by `reset`: ESC H, ESC >
 			}
 		};
-
+				
 		self.escapeCodeCSI = function(command, args) {
+			var arg = parseInt(args[0] || '0', 10) || 0;
 			if (command >= 'A' && command <= 'D') {
-				var arg = parseInt(args[0] || '1', 10) || 1;
+				arg = parseInt(args[0] || '1', 10) || 1;
 				if (arg <   0) { arg =   0; }
 				if (arg > 500) { arg = 500; }
 				var directions = {
@@ -183,7 +184,6 @@
 				};
 				self.moveCursor(directions[command]);
 			} else if (command === 'G') {
-				var arg = parseInt(args[0] || '0', 10) || 0;
 				if (arg < 0) { arg = 0; }
 				self.setCursor({ x: arg });
 			} else if (command === 'H' || command === 'f') {
@@ -191,7 +191,6 @@
 				var x = (parseInt(args[1] || '1', 10) || 1) - 1;
 				self.setCursor({ x: x, y: y + self.windowFirstLine() });
 			} else if (command === 'J') {
-				var arg = parseInt(args[0] || '0', 10) || 0;
 				var cols = (self.columns || noop)() || self.cursor.x + 1;
 				var rows = (self.rows || noop)() || 1;
 				var firstLine  = self.windowFirstLine();
@@ -213,21 +212,20 @@
 					self.dirtyLines[y] = true;
 				}
 			} else if (command === 'K') {
-				var arg = parseInt(args[0] || '0', 10) || 0;
 				var line = self.grid[self.cursor.y];
 				if (arg === 1) {
 					self.grid[self.cursor.y] = self.emptyLineArray(self.cursor.x + 1).concat(line.slice(self.cursor.x + 1));
 				} else if (arg === 2) {
 					self.grid[self.cursor.y] = [];
 				} else {
-					if (arg !== 0 && window.console && window.JSON) {
+					if (arg !== 0) {
 						console.log('Unknown argument for CSI "K": ' + arg);
 					}
 					self.grid[self.cursor.y] = line.slice(0, self.cursor.x);
 				}
 				self.dirtyLines[self.cursor.y] = true;
 			} else if (command === 'P') {
-				var arg = parseInt(args[0] || '1', 10) || 1;
+				arg = parseInt(args[0] || '1', 10) || 1;
 				if (arg <   0) { arg =   0; }
 				if (arg > 500) { arg = 500; }
 				if (arg > 0) {
@@ -236,25 +234,23 @@
 					self.dirtyLines[self.cursor.y] = true;
 				}
 			} else if (command === 'h') {
-				var arg = args[0];
-				if (arg === '?25') {
+				if (args[0] === '?25') {
 					self.cursor.visible = true;
-				} else if (window.console && window.JSON) {
-					console.log('Unknown argument for CSI "h": ' + JSON.stringify(arg));
+				} else {
+					console.log('Unknown argument for CSI "h": ' + JSON.stringify(args[0]));
 				}
 			} else if (command === 'l') {
-				var arg = args[0];
-				if (arg === '?25') {
+				if (args[0] === '?25') {
 					self.cursor.visible = false;
-				} else if (window.console && window.JSON) {
-					console.log('Unknown argument for CSI "l": ' + JSON.stringify(arg));
+				} else {
+					console.log('Unknown argument for CSI "l": ' + JSON.stringify(args[0]));
 				}
 			} else if (command === 'm') {
-				if(args.length == 0){
-					args = [0]
+				if(args.length === 0){
+					args = [0];
 				}
 				for (var i = 0; i < args.length; i++) {
-					var arg = parseInt(args[i], 10);
+					arg = parseInt(args[i], 10);
 					if (arg === 0) {
 						self.cursor.attr = 0x0088;
 					} else if (arg === 1) {
@@ -281,11 +277,11 @@
 					} else if (arg === 49) {
 						self.cursor.attr &= ~0x00F0;
 						self.cursor.attr |= 8 << 4;
-					} else if (window.console && window.JSON) {
+					} else {
 						console.log('Unhandled escape code CSI argument for "m": ' + arg);
 					}
 				}
-			} else if (window.console && window.JSON) {
+			} else {
 				console.log('Unhandled escape code CSI ' + JSON.stringify(command) + ' ' + JSON.stringify(args));
 			}
 		};
@@ -293,7 +289,7 @@
 		self.escapeCodeOSC = function(command) {
 			if (command.substr(0, 2) === '0;') {
 				document.title = command.substr(2);
-			} else if (window.console && window.JSON) {
+			} else {
 				console.log('Unhandled escape code OSC ' + JSON.stringify(command));
 			}
 		};
@@ -317,11 +313,9 @@
 						// fail-safe thingy... if no escape codes can be parsed and buffer
 						// contains characters outside ASCII, then something is wrong.
 						// Escape codes use characters within ASCII.
-						if (window.console && window.JSON) {
-							console.log('Removing ESC character, because of bad parse: ' + JSON.stringify(self.buffer));
-						}
+						console.log('Removing ESC character, because of bad parse: ' + JSON.stringify(self.buffer));
 						self.buffer = self.buffer.substr(1); // <-- KIND OF HACK :)
-					} else if (window.console && window.JSON) {
+					} else {
 						console.log('Unhandled escape codes ' + JSON.stringify(self.buffer));
 					}
 				} else {
@@ -339,12 +333,12 @@
 						self.moveCursor({ y: 1 });
 					} else if (ch >= ' ') {
 						self.enterChar(ch);
-					} else if (window.console && window.JSON) {
+					} else {
 						console.log('Unhandled character ' + JSON.stringify(ch));
 					}
 				}
 			}
-			if (self.buffer.length > 0 && window.console && window.JSON) {
+			if (self.buffer.length > 0) {
 				console.log('Unparsed buffer ' + JSON.stringify(self.buffer));
 			}
 		};
@@ -398,7 +392,6 @@
 		inputElement = inputElement || window;
 
 		var noop = function() {};
-		var $window = $(window);
 
 		var self = {
 			term: termemul.LowLevelTerminal(),
@@ -430,7 +423,7 @@
 			var onlyCtrl  = ctrl  && !(shift || meta);
 			var ctrlShift = ctrl  && shift && !meta;
 			//console.log('keydown... ' + e.which, shift, ctrl, meta);
-			if (!mods && (e.which === 8 || e.which === 9 || e.which === 27)) {
+			if (!mods && (e.which === 8 || e.which === 9 || e.which === 27)) { //backspace tab esc
 				var ch = String.fromCharCode(e.which);
 				(self.oninput || noop)(ch);
 			} else if (!mods && e.which === 37) { // Left arrow
@@ -442,13 +435,12 @@
 			} else if (!mods && e.which === 40) { // Down arrow
 				(self.oninput || noop)('\u001B[B');
 			} else if (onlyCtrl && e.which >= 65 && e.which <= 90) { // Ctrl + A-Z
-				var ch = String.fromCharCode(e.which - 64);
-				(self.oninput || noop)(ch);
-			} else if (ctrlShift && e.which === 84) {
+				(self.oninput || noop)(String.fromCharCode(e.which - 64));
+			} else if (ctrlShift && e.which === 84) { // Ctrl Shift t to open  new tab
 				window.open(location.href);
-			} else if (ctrlShift && e.which === 87) {
+			} else if (ctrlShift && e.which === 87) { // Ctrl Shift w to close tab
 				window.close();
-			} else if (window.console) {
+			} else {
 				//console.log('Unhandled keydown ' + e.which);
 				return;
 			}
@@ -461,7 +453,7 @@
 			var ch = String.fromCharCode(e.which);
 			if (ch === '\r' || ch >= ' ') {
 				(self.oninput || noop)(ch);
-			} else if (window.console && window.JSON) {
+			} else {
 				console.log('Unhandled keypress ' + JSON.stringify(ch));
 			}
 			e.preventDefault();
@@ -500,18 +492,18 @@
 		var cachedScrollTop = null;
 		self.scrollSnap = function() {
 			var characterHeight = self.characterHeight();
-			var position = $window.scrollTop();
+			var position = $(window).scrollTop();
 			var snapPosition = Math.floor(Math.floor(position / characterHeight) * characterHeight);
 			if (position !== snapPosition) {
-				$window.scrollTop(snapPosition);
+				$(window).scrollTop(snapPosition);
 				cachedScrollTop = snapPosition;
 			}
 			return false;
 		};
 
 		self.enableScrollSnapping = function() {
-			$window.scroll(self.scrollSnap);
-			$window.resize(self.scrollSnap);
+			$(window).scroll(self.scrollSnap);
+			$(window).resize(self.scrollSnap);
 			setTimeout(self.scrollSnap, 0);
 		};
 		self.enableScrollSnapping();
@@ -523,12 +515,12 @@
 			}
 			var position = firstLine * self.characterHeight();
 			if (position !== cachedScrollTop) {
-				$window.scrollTop(position);
+				$(window).scrollTop(position);
 				cachedScrollTop = position;
 			}
 			return false;
 		};
-		$window.resize(function() {
+		$(window).resize(function() {
 			self.invalidateCachedSize();
 			self.scrollToBottom();
 			return false;
@@ -606,7 +598,7 @@
 		var cachedColumns = null;
 		self.columns = function() {
 			if (!cachedColumns) {
-				cachedColumns = Math.floor($window.width()  / self.characterWidth());
+				cachedColumns = Math.floor($(window).width()  / self.characterWidth());
 			}
 			return cachedColumns;
 		};
@@ -615,7 +607,7 @@
 		var cachedRows = null;
 		self.rows = function() {
 			if (!cachedRows) {
-				cachedRows = Math.floor($window.height() / self.characterHeight());
+				cachedRows = Math.floor($(window).height() / self.characterHeight());
 			}
 			return cachedRows;
 		};
