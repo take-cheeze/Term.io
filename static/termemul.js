@@ -166,18 +166,20 @@
 				self.reset();
 			} else if (command === '(B') {
 				self.cursor.attr &= ~0x300; // <-- HACK SO `top` WORKS PROPERLY
+			} else if (command === '7' || command === '8'){
+				console.log("Save/Restore cursor: not implemented"); 
+			} else if(command === '=' || command === '>'){ // used in less, vi, reset
+				console.log("Application keypad on/off: not implemented");
 			} else {
-				console.log('Unhandled escape code ESC ' + JSON.stringify(command));
-				// Used by 'vi': ESC 7,         Save Cursor
-				// Used by 'less','vi': ESC =,  Application Keypad (not implementing now - I don't have a keypad on laptop)
-				// Used by 'reset': ESC H,      Tab Set
-				// Used by 'less','reset' ESC > Normal Keypad (not implementing now - I don't have a keypad on laptop)
+				console.log('Unhandled escape code ESC ' + command);
 			}
 		};
 				
-		self.escapeCodeCSI = function(command, args) {
+		self.escapeCodeCSI = function(args, command) {
+			console.log(this)
+			args = args ? args.split(';') : []
 			var arg = parseInt(args[0] || '0', 10) || 0;
-			if (command >= 'A' && command <= 'D') {
+			if (command >= 'A' && command <= 'D') {//Arrow Keys
 				arg = parseInt(args[0] || '1', 10) || 1;
 				if (arg <   0) { arg =   0; }
 				if (arg > 500) { arg = 500; }
@@ -188,14 +190,14 @@
 					'D': { x: -arg }
 				};
 				self.moveCursor(directions[command]);
-			} else if (command === 'G') {
+			} else if (command === 'G') { //Move cursor to col n
 				if (arg < 0) { arg = 0; }
 				self.setCursor({ x: arg });
-			} else if (command === 'H' || command === 'f') {
+			} else if (command === 'H' || command === 'f') { //Move cursor to pos x,y
 				var y = (parseInt(args[0] || '1', 10) || 1) - 1;
 				var x = (parseInt(args[1] || '1', 10) || 1) - 1;
 				self.setCursor({ x: x, y: y + self.windowFirstLine() });
-			} else if (command === 'J') {
+			} else if (command === 'J') { //Clear screen
 				var cols = (self.columns || noop)() || self.cursor.x + 1;
 				var rows = (self.rows || noop)() || 1;
 				var firstLine  = self.windowFirstLine();
@@ -216,7 +218,7 @@
 					self.grid[y] = emptyLine.slice(0);
 					self.dirtyLines[y] = true;
 				}
-			} else if (command === 'K') {
+			} else if (command === 'K') { //Clear line
 				var line = self.grid[self.cursor.y];
 				if (arg === 1) {
 					self.grid[self.cursor.y] = self.emptyLineArray(self.cursor.x + 1).concat(line.slice(self.cursor.x + 1));
@@ -229,7 +231,7 @@
 					self.grid[self.cursor.y] = line.slice(0, self.cursor.x);
 				}
 				self.dirtyLines[self.cursor.y] = true;
-			} else if (command === 'P') {
+			} else if (command === 'P') { //Delete
 				arg = parseInt(args[0] || '1', 10) || 1;
 				if (arg <   0) { arg =   0; }
 				if (arg > 500) { arg = 500; }
@@ -238,68 +240,79 @@
 					self.grid[self.cursor.y] = line.slice(0, self.cursor.x).concat(line.slice(self.cursor.x + arg));
 					self.dirtyLines[self.cursor.y] = true;
 				}
-			} else if (command === 'h') {
+			} else if (command === 'c'){ //Send device attributes
+				console.log('Send device attributes: not implemented ('+JSON.stringify(args)+')'); //used by vi
+			} else if (command === 'h') { //Set Mode
 				arg = args[0];
-				if(arg === '?1'){
+				if(arg === '?1'){ //App Cursor Keys
 					self.appCursorKeys = true;
 				}
-				else if (arg === '?25') {
+				else if (arg === '?25') { //Cursor Visible
 					self.cursor.visible = true;
 				} 
+				else if(arg === '?47'){	//Alternate screen buffer
+					console.log('Alternate screen buffer: not implemented');//vi, man, less
+				}
 				else {
 					console.log('Unknown argument for CSI "h": ' + JSON.stringify(arg));
-					// Used by vi, man ?47 - alternate screen buffer
 				}
-			} else if (command === 'l') {
+			} else if (command === 'l') { //Reset Mode
 				arg = args[0];
-				if(arg === '?1'){
+				if(arg === '?1'){ //Normal Cursor Keys
 					self.appCursorKeys = false;
-				}
-				else if (arg === '?25') {
+				} else if (arg === '?25') { //Cursor invisible
 					self.cursor.visible = false;
-				} 
-				else {
-					console.log('Unknown argument for CSI "l": ' + JSON.stringify(args[0]));
+				} else if (arg === '?47'){ //Normal Screen buffer
+					console.log('Alternate screen buffer: not implemented');
+				} else {
+					console.log('Unknown argument for CSI "l": ' + JSON.stringify(arg));
 				}
-			} else if (command === 'm') {
+			} else if (command === 'm') { //Set Graphics
 				if(args.length === 0){
 					args = [0];
 				}
 				for (var i = 0; i < args.length; i++) {
 					arg = parseInt(args[i], 10);
-					if (arg === 0) {
+					// Bits
+					// 0-3	Text color
+					// 4-7	Bg color
+					// 8	Bold
+					// 9	Image Negative
+					// 10	Underline
+					if (arg === 0) { //Default
 						self.cursor.attr = 0x0088;
-					} else if (arg === 1) {
+					} else if (arg === 1) { //Bold
 						self.cursor.attr |= 0x0100;
-					} else if (arg === 2) {
+					} else if (arg === 2) { //Bold off
 						self.cursor.attr &= ~0x0100;
-					} else if (arg === 4) {
+					} else if (arg === 4) { //Underline
 						self.cursor.attr |= 0x0400;
-					} else if (arg === 7) {
+					} else if (arg === 7) { //Image negative
 						self.cursor.attr |= 0x0200;
-					} else if (arg === 24) {
+					} else if (arg === 24) { //Underline off
 						self.cursor.attr &= ~0x0400;
-					} else if (arg === 27) {
+					} else if (arg === 27) { //Image negative off
 						self.cursor.attr &= ~0x0200;
-					} else if (arg >= 30 && arg <= 37) {
+					} else if (arg >= 30 && arg <= 37) { //Text Color
 						self.cursor.attr &= ~0x000F;
 						self.cursor.attr |= arg - 30;
-					} else if (arg === 39) {
+					} else if (arg === 39) { //Default Text Color
 						self.cursor.attr &= ~0x000F;
 						self.cursor.attr |= 8;
-					} else if (arg >= 40 && arg <= 47) {
+					} else if (arg >= 40 && arg <= 47) { //Bg Color
 						self.cursor.attr &= ~0x00F0;
 						self.cursor.attr |= (arg - 40) << 4;
-					} else if (arg === 49) {
+					} else if (arg === 49) { //Default Bg Color
 						self.cursor.attr &= ~0x00F0;
 						self.cursor.attr |= 8 << 4;
 					} else {
 						console.log('Unhandled escape code CSI argument for "m": ' + arg);
 					}
 				}
+			} else if (command === 'r'){ //Set scrolling region
+				console.log('Set scrolling region: not implemented ('+JSON.stringify(args)+')'); //vi
 			} else {
-				console.log('Unhandled escape code CSI ' + JSON.stringify(command) + ' ' + JSON.stringify(args));
-				//Used by 'vi' CSI r [x,y]  Set scrolling region defaults to whole screen
+				console.log('Unhandled escape code CSI ' + command + ' ' + JSON.stringify(args));
 			}
 		};
 
@@ -310,22 +323,27 @@
 				console.log('Unhandled escape code OSC ' + JSON.stringify(command));
 			}
 		};
-
+		
+		var rESC = /^\u001B([()#][0-9A-Za-z]|[0-9A-Za-z<>=])/,
+		rCSI = /^(?:\u001B\[|\u009B)([ -?]*)([@-~])/,
+		rOSC = /^\u001B\](.*)(?:\u0007|\u001B\\)/
 		self.parseBuffer = function() {
 			var currentLength = 0;
+			//console.log(JSON.stringify(self.buffer))
 			while (currentLength !== self.buffer.length && self.buffer.length > 0) {
 				currentLength = self.buffer.length;
-				if (self.buffer.substr(0, 1) === '\u001B') {
+				var ch = self.buffer.substr(0, 1);
+				if (ch === '\u001B') {
 					var matches;
-					if (matches = self.buffer.match(/^\u001B([()#][0-9A-Za-z]|[0-9A-Za-z<>=])/)) {
+					if (matches = self.buffer.match(rESC)) {
 						self.buffer = self.buffer.substr(matches[0].length);
-						self.escapeCodeESC(matches[1]);
-					} else if (matches = self.buffer.match(/^(?:\u001B\[|\u009B)([ -?]*)([@-~])/)) {
+						self.escapeCodeESC.apply(this, matches.slice(1));
+					} else if (matches = self.buffer.match(rCSI)) {
 						self.buffer = self.buffer.substr(matches[0].length);
-						self.escapeCodeCSI(matches[2], matches[1] ? matches[1].split(';') : []);
-					} else if (matches = self.buffer.match(/^\u001B\](.*)(?:\u0007|\u001B\\)/)) {
+						self.escapeCodeCSI.apply(this, matches.slice(1));
+					} else if (matches = self.buffer.match(rOSC)) {
 						self.buffer = self.buffer.substr(matches[0].length);
-						self.escapeCodeOSC(matches[1]);
+						self.escapeCodeOSC.apply(this, matches.slice(1));
 					} else if (self.buffer.match(/[^\u0001-~\u009B]/)) {
 						// fail-safe thingy... if no escape codes can be parsed and buffer
 						// contains characters outside ASCII, then something is wrong.
@@ -336,7 +354,6 @@
 						console.log('Unhandled escape codes ' + JSON.stringify(self.buffer));
 					}
 				} else {
-					var ch = self.buffer.substr(0, 1);
 					self.buffer = self.buffer.substr(1);
 					if (ch === '\u0007') {
 						(self.bell || noop)();
