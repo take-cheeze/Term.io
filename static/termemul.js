@@ -103,7 +103,7 @@
 		};
 */
 		self.replaceInArray = function(array, index, replacement) {
-			return array.slice(0, index).concat(replacement).concat(array.slice(index + replacement.length - 1));
+			return array.slice(0, index).concat(replacement).concat(array.slice(index + replacement.length));
 		};
 
 		self.replaceChar = function(position, ach) {
@@ -176,7 +176,6 @@
 		};
 				
 		self.escapeCodeCSI = function(args, command) {
-			console.log(this)
 			args = args ? args.split(';') : []
 			var arg = parseInt(args[0] || '0', 10) || 0;
 			if (command >= 'A' && command <= 'D') {//Arrow Keys
@@ -329,7 +328,7 @@
 		rOSC = /^\u001B\](.*)(?:\u0007|\u001B\\)/
 		self.parseBuffer = function() {
 			var currentLength = 0;
-			//console.log(JSON.stringify(self.buffer))
+			console.log(JSON.stringify(self.buffer))
 			while (currentLength !== self.buffer.length && self.buffer.length > 0) {
 				currentLength = self.buffer.length;
 				var ch = self.buffer.substr(0, 1);
