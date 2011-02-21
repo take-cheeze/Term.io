@@ -630,10 +630,10 @@
 
 		var cachedColumns = null;
 		self.columns = function() {
-			// FIXME
-			// if (!cachedColumns) {
-			//    cachedColumns = Math.floor($(window).width() / self.characterWidth());
-			// }
+			if (!cachedColumns) {
+			    cachedColumns = Math.floor($(window).width() / self.characterWidth());
+			}
+			// TODO: implement changing tty cols by resizing window
 			cachedColumns = 80;
 			return cachedColumns;
 		};
@@ -644,6 +644,8 @@
 			if (!cachedRows) {
 				cachedRows = Math.floor($(window).height() / self.characterHeight());
 			}
+			// TODO: implement changeing tty rows by resizing window
+			cachedRows = 24;
 			return cachedRows;
 		};
 		self.term.rows = self.rows;
