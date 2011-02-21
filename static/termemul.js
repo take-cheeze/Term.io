@@ -62,8 +62,10 @@
 
 		self.renderEachDirtyLine = function(iterator) {
 			for (var lineNo in self.dirtyLines) {
-				lineNo = lineNo | 0;
-				iterator(lineNo, self.renderLineAsHtml(lineNo));
+				if(lineNo >= 0){
+					lineNo = lineNo | 0;
+					iterator(lineNo, self.renderLineAsHtml(lineNo));
+				}
 			}
 			self.dirtyLines = {}; // Reset list of dirty lines after rendering
 		};
@@ -123,6 +125,7 @@
 			self.ensureLineExists(self.cursor.y);
 			var cols = (self.columns || noop)() || 500;
 			if(self.cursor.x > cols){
+				console.log('Cursor out of tty bounds');
 				self.cursor.x = 0;
 				self.cursor.y++;
 			}
@@ -176,9 +179,10 @@
 		};
 				
 		self.escapeCodeCSI = function(args, command) {
-			args = args ? args.split(';') : []
+			args = args ? args.split(';') : [];
 			var arg = parseInt(args[0] || '0', 10) || 0;
-			if (command >= 'A' && command <= 'D') {//Arrow Keys
+			var line;
+			if (command >= 'A' && command <= 'D') { //Arrow Keys
 				arg = parseInt(args[0] || '1', 10) || 1;
 				if (arg <   0) { arg =   0; }
 				if (arg > 500) { arg = 500; }
@@ -193,9 +197,9 @@
 				if (arg < 0) { arg = 0; }
 				self.setCursor({ x: arg });
 			} else if (command === 'H' || command === 'f') { //Move cursor to pos x,y
-				var y = (parseInt(args[0] || '1', 10) || 1) - 1;
-				var x = (parseInt(args[1] || '1', 10) || 1) - 1;
-				self.setCursor({ x: x, y: y + self.windowFirstLine() });
+				var newY = (parseInt(args[0] || '1', 10) || 1) - 1;
+				var newX = (parseInt(args[1] || '1', 10) || 1) - 1;
+				self.setCursor({ x: newX, y: newY + self.windowFirstLine() });
 			} else if (command === 'J') { //Clear screen
 				var cols = (self.columns || noop)() || self.cursor.x + 1;
 				var rows = (self.rows || noop)() || 1;
@@ -218,7 +222,7 @@
 					self.dirtyLines[y] = true;
 				}
 			} else if (command === 'K') { //Clear line
-				var line = self.grid[self.cursor.y];
+				line = self.grid[self.cursor.y];
 				if (arg === 1) {
 					self.grid[self.cursor.y] = self.emptyLineArray(self.cursor.x + 1).concat(line.slice(self.cursor.x + 1));
 				} else if (arg === 2) {
@@ -235,7 +239,7 @@
 				if (arg <   0) { arg =   0; }
 				if (arg > 500) { arg = 500; }
 				if (arg > 0) {
-					var line = self.grid[self.cursor.y];
+					line = self.grid[self.cursor.y];
 					self.grid[self.cursor.y] = line.slice(0, self.cursor.x).concat(line.slice(self.cursor.x + arg));
 					self.dirtyLines[self.cursor.y] = true;
 				}
@@ -325,33 +329,34 @@
 		
 		var rESC = /^\u001B([()#][0-9A-Za-z]|[0-9A-Za-z<>=])/,
 		rCSI = /^(?:\u001B\[|\u009B)([ -?]*)([@-~])/,
-		rOSC = /^\u001B\](.*)(?:\u0007|\u001B\\)/
+		rOSC = /^\u001B\](.*)(?:\u0007|\u001B\\)/;
 		self.parseBuffer = function() {
+			console.log(JSON.stringify(self.buffer));
 			var currentLength = 0;
-			console.log(JSON.stringify(self.buffer))
+			var matches;
 			while (currentLength !== self.buffer.length && self.buffer.length > 0) {
 				currentLength = self.buffer.length;
 				var ch = self.buffer.substr(0, 1);
-				if (ch === '\u001B') {
-					var matches;
-					if (matches = self.buffer.match(rESC)) {
+				if (ch === '\u001B' || ch === '\u009B') {
+					matches = self.buffer.match(rESC);
+					if (matches) {
 						self.buffer = self.buffer.substr(matches[0].length);
 						self.escapeCodeESC.apply(this, matches.slice(1));
-					} else if (matches = self.buffer.match(rCSI)) {
+						continue;
+					}
+					matches = self.buffer.match(rCSI);
+					if (matches) {
 						self.buffer = self.buffer.substr(matches[0].length);
 						self.escapeCodeCSI.apply(this, matches.slice(1));
-					} else if (matches = self.buffer.match(rOSC)) {
+						continue;
+					}
+					matches = self.buffer.match(rOSC);
+					if (matches) {
 						self.buffer = self.buffer.substr(matches[0].length);
 						self.escapeCodeOSC.apply(this, matches.slice(1));
-					} else if (self.buffer.match(/[^\u0001-~\u009B]/)) {
-						// fail-safe thingy... if no escape codes can be parsed and buffer
-						// contains characters outside ASCII, then something is wrong.
-						// Escape codes use characters within ASCII.
-						console.log('Removing ESC character, because of bad parse: ' + JSON.stringify(self.buffer));
-						self.buffer = self.buffer.substr(1); // <-- KIND OF HACK :)
-					} else {
-						console.log('Unhandled escape codes ' + JSON.stringify(self.buffer));
+						continue;
 					}
+					console.log('Unhandled escape codes ' + JSON.stringify(self.buffer));
 				} else {
 					self.buffer = self.buffer.substr(1);
 					if (ch === '\u0007') {
