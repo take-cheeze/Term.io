@@ -121,15 +121,15 @@
 			var scrollDiff = self.scrollRegion[1] - self.scrollRegion[0];
 			if(self.specialScrollRegion && self.scrollRegion[1] < newYScreenCoords){
 				var newYLineCoords = newPosition.y - 1;
-				var scrollTop = newYLineCoords - scrollDiff
-				var blank = self.emptyLineArray(1)
-				var g = self.grid
+				var scrollTop = newYLineCoords - scrollDiff;
+				var blank = self.emptyLineArray(1);
+				var g = self.grid;
 				self.grid = g.slice(0,scrollTop).concat(g.slice(scrollTop + 1,newYLineCoords + 1),blank,g.slice(newYLineCoords +1));
 				for (var y = scrollTop; y <= newYLineCoords; y++) {
 					self.dirtyLines[y] = true;
 				}
 			} else if(self.specialScrollRegion && self.scrollRegion[0] > newYScreenCoords){
-				console.log("specialScrollRegion: Not Implemented "+self.scrollRegion+newYScreenCoords)
+				console.log("specialScrollRegion: Not Implemented "+self.scrollRegion+newYScreenCoords);
 			} else {
 				self.dirtyLines[self.cursor.y] = true;
 				if (newPosition.x !== undefined) {
@@ -359,7 +359,7 @@
 		self.debugLog = function(text){
 			var esc = String.fromCharCode(9243);
 			var line = text.replace(/\u001b/g,esc);
-			var line = JSON.stringify(line);
+			line = JSON.stringify(line);
 			console.log(line);
 		};
 		
