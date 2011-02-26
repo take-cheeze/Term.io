@@ -9,8 +9,8 @@
 			buffer: '',
 			cursorId: 'cursor',
 			onreset: null,
-			columns: null,
-			rows: null,
+			columns: 80,
+			rows: 24,
 			bell: null,
 			appCursorKeys: false,
 			specialScrollRegion: false,
@@ -88,7 +88,7 @@
 		};
 
 		self.windowFirstLine = function() {
-			return Math.max(0, self.grid.length - (self.rows || noop)() || 1);
+			return Math.max(0, self.grid.length - self.rows);
 		};
 
 		self.emptyLineArray = function(maxSize) {
@@ -120,7 +120,7 @@
 			var newYScreenCoords = newPosition.y - self.windowFirstLine() + 1;
 			var scrollDiff = self.scrollRegion[1] - self.scrollRegion[0];
 			if(self.specialScrollRegion && self.scrollRegion[1] < newYScreenCoords){
-				var newYLineCoords = newPosition.y - 1
+				var newYLineCoords = newPosition.y - 1;
 				var scrollTop = newYLineCoords - scrollDiff
 				var blank = self.emptyLineArray(1)
 				var g = self.grid
@@ -142,8 +142,7 @@
 			
 			
 			self.ensureLineExists(self.cursor.y);
-			var cols = (self.columns || noop)() || 500;
-			if(self.cursor.x > cols){
+			if(self.cursor.x > self.columns){
 				console.log('Cursor out of tty bounds');
 				self.cursor.x = 0;
 				//self.cursor.y++;
@@ -224,22 +223,20 @@
 				var newX = self.parseArg(args[1],1) - 1;
 				self.setCursor({ x: newX, y: newY + self.windowFirstLine() });
 			} else if (command === 'J') { //Clear screen
-				var cols = (self.columns || noop)() || self.cursor.x + 1;
-				var rows = (self.rows || noop)() || 1;
 				var firstLine  = self.windowFirstLine();
-				var lastLine   = Math.min(firstLine + rows, self.grid.length) - 1;
+				var lastLine   = Math.min(firstLine + self.rows, self.grid.length) - 1;
 				var cursorLine = self.cursor.y;
 				if (arg === 1) {
-					lastLine  = firstLine + rows - 1;
+					lastLine  = firstLine + self.rows - 1;
 					firstLine = cursorLine;
 				} else if (arg !== 2) {
 					lastLine = cursorLine;
 				} else {
 					firstLine = lastLine;
-					lastLine  = firstLine + rows - 1;
+					lastLine  = firstLine + self.rows - 1;
 					self.setCursor({ y: firstLine });
 				}
-				var emptyLine = self.emptyLineArray(cols);
+				var emptyLine = self.emptyLineArray(self.columns);
 				for (var y = firstLine; y <= lastLine; y++) {
 					self.grid[y] = emptyLine.slice(0);
 					self.dirtyLines[y] = true;
@@ -590,7 +587,7 @@
 		self.enableScrollSnapping();
 
 		self.scrollToBottom = function() {
-			var firstLine = self.numberOfLines() - 1 - self.rows();
+			var firstLine = self.numberOfLines() - 1 - self.term.rows;
 			if (firstLine < 0) {
 				firstLine = 0;
 			}
@@ -602,7 +599,7 @@
 			return false;
 		};
 		$(window).resize(function() {
-			self.invalidateCachedSize();
+			//TODO: update tty size with stty on host
 			self.scrollToBottom();
 			return false;
 		});
@@ -653,62 +650,16 @@
 				cachedCharacterHeight = line.innerHeight() || 1; // TODO: Is this really stable crossbrowser?
 			}
 			return cachedCharacterHeight;
-
-			/* OLD WAY TO DO IT (is it selfer?)
-			var lines  = self.numberOfLines();
-			var height = self.height();
-			return (height / lines) || 1;
-			*/
 		};
 
-		self.invalidateCachedCharacterSize = function() {
-			cachedCharacterWidth  = null;
-			cachedCharacterHeight = null;
-			self.invalidateCachedSize();
-			return false;
+		// TODO: use this for changing number of tty columns on window resize (stty -F ttys### columns x)
+		self.getWindowColumns = function() {
+			return Math.floor($(window).width() / self.characterWidth());
 		};
 
-		self.width = function() {
-			return self.terminalElement.innerWidth();
-		};
-
-		self.height = function() {
-			return self.terminalElement.innerHeight();
-		};
-
-		var cachedColumns = null;
-		self.columns = function() {
-			if (!cachedColumns) {
-			    cachedColumns = Math.floor($(window).width() / self.characterWidth());
-			}
-			// TODO: implement changing tty cols by resizing window
-			cachedColumns = 80;
-			return cachedColumns;
-		};
-		self.term.columns = self.columns;
-
-		var cachedRows = null;
-		self.rows = function() {
-			if (!cachedRows) {
-				cachedRows = Math.floor($(window).height() / self.characterHeight());
-			}
-			// TODO: implement changeing tty rows by resizing window
-			cachedRows = 24;
-			return cachedRows;
-		};
-		self.term.rows = self.rows;
-
-		self.size = function() {
-			return {
-				x: self.columns(),
-				y: self.rows()
-			};
-		};
-
-		self.invalidateCachedSize = function() {
-			cachedColumns = null;
-			cachedRows = null;
-			return false;
+		// TODO: use this for changing number of tty rows on window resize (stty -F ttys### rows x)
+		self.getWindowRows = function() {
+			return Math.floor($(window).height() / self.characterHeight());
 		};
 
 		self.ensureLineExists = function(lineNo) {
