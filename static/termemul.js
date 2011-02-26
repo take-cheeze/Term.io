@@ -35,9 +35,7 @@
 			if (lineNo >= self.grid.length) {
 				return '';
 			}
-
 			var line = self.grid[lineNo];
-
 			var lineLength = line.length;
 			if (lineNo === self.cursor.y && self.cursor.x + 1 > lineLength) {
 				lineLength = self.cursor.x + 1;
@@ -60,6 +58,26 @@
 			}
 
 			return html;
+		};
+		
+		// For Debugging
+		self.renderLineAsText = function(lineNo) {
+			if (lineNo >= self.grid.length) {
+				return '';
+			}
+			var line = self.grid[lineNo];
+			var lineLength = line.length;
+			if (lineNo === self.cursor.y && self.cursor.x + 1 > lineLength) {
+				lineLength = self.cursor.x + 1;
+			}
+			
+			var text = '';
+			for (var i = 0; i < lineLength; i++) {
+				var ach = line[i] || [null, ' '];
+				text += ach[1];
+			}
+
+			return text;
 		};
 
 		self.renderEachDirtyLine = function(iterator) {
@@ -139,7 +157,6 @@
 					self.cursor.y = (newPosition.y < 0) ? 0 : newPosition.y;
 				}
 			}
-			
 			
 			self.ensureLineExists(self.cursor.y);
 			if(self.cursor.x > self.columns){
