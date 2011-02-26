@@ -12,7 +12,9 @@
 			columns: null,
 			rows: null,
 			bell: null,
-			appCursorKeys: false
+			appCursorKeys: false,
+			specialScrollRegion: false,
+			scrollRegion: [0,0]
 		};
 		
 		var noop = function() {};
@@ -105,7 +107,7 @@
 		};
 */
 		self.replaceInArray = function(array, index, replacement) {
-			return array.slice(0, index).concat(replacement).concat(array.slice(index + replacement.length));
+			return array.slice(0, index).concat(replacement,array.slice(index + replacement.length));
 		};
 
 		self.replaceChar = function(position, ach) {
@@ -115,19 +117,36 @@
 		};
 
 		self.setCursor = function(newPosition) {
-			self.dirtyLines[self.cursor.y] = true;
-			if (newPosition.x !== undefined) {
-				self.cursor.x = (newPosition.x < 0) ? 0 : newPosition.x;
+			var newYScreenCoords = newPosition.y - self.windowFirstLine() + 1;
+			var scrollDiff = self.scrollRegion[1] - self.scrollRegion[0];
+			if(self.specialScrollRegion && self.scrollRegion[1] < newYScreenCoords){
+				var newYLineCoords = newPosition.y - 1
+				var scrollTop = newYLineCoords - scrollDiff
+				var blank = self.emptyLineArray(1)
+				var g = self.grid
+				self.grid = g.slice(0,scrollTop).concat(g.slice(scrollTop + 1,newYLineCoords + 1),blank,g.slice(newYLineCoords +1));
+				for (var y = scrollTop; y <= newYLineCoords; y++) {
+					self.dirtyLines[y] = true;
+				}
+			} else if(self.specialScrollRegion && self.scrollRegion[0] > newYScreenCoords){
+				console.log("specialScrollRegion: Not Implemented "+self.scrollRegion+newYScreenCoords)
+			} else {
+				self.dirtyLines[self.cursor.y] = true;
+				if (newPosition.x !== undefined) {
+					self.cursor.x = (newPosition.x < 0) ? 0 : newPosition.x;
+				}
+				if (newPosition.y !== undefined) {
+					self.cursor.y = (newPosition.y < 0) ? 0 : newPosition.y;
+				}
 			}
-			if (newPosition.y !== undefined) {
-				self.cursor.y = (newPosition.y < 0) ? 0 : newPosition.y;
-			}
+			
+			
 			self.ensureLineExists(self.cursor.y);
 			var cols = (self.columns || noop)() || 500;
 			if(self.cursor.x > cols){
 				console.log('Cursor out of tty bounds');
 				self.cursor.x = 0;
-				self.cursor.y++;
+				//self.cursor.y++;
 			}
 			self.dirtyLines[self.cursor.y] = true;
 			self.ensureLineExists(self.cursor.y);
@@ -164,6 +183,10 @@
 			self.appCursorKeys = false;
 		};
 
+		self.parseArg = function(arg, defaultVal){
+			return parseInt(arg || defaultVal, 10) || defaultVal;
+		};
+
 		self.escapeCodeESC = function(command) {
 			if (command === 'c') {
 				self.reset();
@@ -180,10 +203,10 @@
 				
 		self.escapeCodeCSI = function(args, command) {
 			args = args ? args.split(';') : [];
-			var arg = parseInt(args[0] || '0', 10) || 0;
+			var arg = self.parseArg(args[0],0);
 			var line;
 			if (command >= 'A' && command <= 'D') { //Arrow Keys
-				arg = parseInt(args[0] || '1', 10) || 1;
+				arg = self.parseArg(args[0],1);
 				if (arg <   0) { arg =   0; }
 				if (arg > 500) { arg = 500; }
 				var directions = {
@@ -197,8 +220,8 @@
 				if (arg < 0) { arg = 0; }
 				self.setCursor({ x: arg });
 			} else if (command === 'H' || command === 'f') { //Move cursor to pos x,y
-				var newY = (parseInt(args[0] || '1', 10) || 1) - 1;
-				var newX = (parseInt(args[1] || '1', 10) || 1) - 1;
+				var newY = self.parseArg(args[0],1) - 1;
+				var newX = self.parseArg(args[1],1) - 1;
 				self.setCursor({ x: newX, y: newY + self.windowFirstLine() });
 			} else if (command === 'J') { //Clear screen
 				var cols = (self.columns || noop)() || self.cursor.x + 1;
@@ -234,8 +257,10 @@
 					self.grid[self.cursor.y] = line.slice(0, self.cursor.x);
 				}
 				self.dirtyLines[self.cursor.y] = true;
+			} else if (command === 'L') { //Insert line
+				console.log('Insert line: not implemented'); //used by vi
 			} else if (command === 'P') { //Delete
-				arg = parseInt(args[0] || '1', 10) || 1;
+				arg = self.parseArg(args[0],1);
 				if (arg <   0) { arg =   0; }
 				if (arg > 500) { arg = 500; }
 				if (arg > 0) {
@@ -275,7 +300,7 @@
 					args = [0];
 				}
 				for (var i = 0; i < args.length; i++) {
-					arg = parseInt(args[i], 10);
+					arg = self.parseArg(args[i],0);
 					// Bits
 					// 0-3	Text color
 					// 4-7	Bg color
@@ -312,8 +337,15 @@
 						console.log('Unhandled escape code CSI argument for "m": ' + arg);
 					}
 				}
-			} else if (command === 'r'){ //Set scrolling region
-				console.log('Set scrolling region: not implemented ('+JSON.stringify(args)+')'); //vi
+			} else if (command === 'r'){ //Set scrolling region (vi)
+				var topRow = self.parseArg(args[0],0);
+				var botRow = self.parseArg(args[1],0);
+				if(topRow === 0 && botRow == (self.rows || noop)() || 0){
+					self.specialScrollRegion = false;
+				} else {
+					self.specialScrollRegion = true;
+					self.scrollRegion = [topRow,botRow];
+				}
 			} else {
 				console.log('Unhandled escape code CSI ' + command + ' ' + JSON.stringify(args));
 			}
@@ -327,11 +359,18 @@
 			}
 		};
 		
+		self.debugLog = function(text){
+			var esc = String.fromCharCode(9243);
+			var line = text.replace(/\u001b/g,esc);
+			var line = JSON.stringify(line);
+			console.log(line);
+		};
+		
 		var rESC = /^\u001B([()#][0-9A-Za-z]|[0-9A-Za-z<>=])/,
 		rCSI = /^(?:\u001B\[|\u009B)([ -?]*)([@-~])/,
 		rOSC = /^\u001B\](.*)(?:\u0007|\u001B\\)/;
 		self.parseBuffer = function() {
-			console.log(JSON.stringify(self.buffer));
+			self.debugLog(self.buffer);
 			var currentLength = 0;
 			var matches;
 			while (currentLength !== self.buffer.length && self.buffer.length > 0) {
@@ -356,6 +395,7 @@
 						self.escapeCodeOSC.apply(this, matches.slice(1));
 						continue;
 					}
+					//TODO make it so esc esc or something like that wouldn't break term
 					console.log('Unhandled escape codes ' + JSON.stringify(self.buffer));
 				} else {
 					self.buffer = self.buffer.substr(1);
@@ -379,6 +419,8 @@
 			if (self.buffer.length > 0) {
 				console.log('Unparsed buffer ' + JSON.stringify(self.buffer));
 			}
+			//console.log(self.grid);
+			
 		};
 
 		self.write = function(data) {
@@ -430,9 +472,11 @@
 		inputElement = inputElement || window;
 
 		var noop = function() {};
-
+		
+		var lowLevelTerm = termemul.LowLevelTerminal();
+		window.term = lowLevelTerm;
 		var self = {
-			term: termemul.LowLevelTerminal(),
+			term: lowLevelTerm,
 			terminalElement: $(element),
 			terminalInputElement: $(inputElement),
 			oninput: null,
@@ -686,7 +730,7 @@
 				self.terminalElement.find('> :eq(' + lineNo + ')').html(html);
 			});
 			self.scrollToBottom(); // Auto-scroll always on right now.
-			self.startCursorBlinking();
+			//self.startCursorBlinking();
 		};
 
 		return self;
