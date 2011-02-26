@@ -82,7 +82,7 @@
 		self.ensureColumnExists = function(position) {
 			var line = self.grid[position.y];
 			self.dirtyLines[position.y] = true;
-			while (line.length <= position.x) {
+			while (line.length < position.x) {
 				line.push([self.cursor.attr, ' ']);
 			}
 		};
@@ -143,9 +143,8 @@
 			
 			self.ensureLineExists(self.cursor.y);
 			if(self.cursor.x > self.columns){
-				console.log('Cursor out of tty bounds');
 				self.cursor.x = 0;
-				//self.cursor.y++;
+				self.cursor.y++;
 			}
 			self.dirtyLines[self.cursor.y] = true;
 			self.ensureLineExists(self.cursor.y);
