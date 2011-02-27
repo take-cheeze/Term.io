@@ -110,8 +110,8 @@
 		};
 
 		self.emptyLineArray = function(maxSize) {
-			maxSize = maxSize || 512;
-
+			maxSize = maxSize || 80;
+			
 			var array = [[self.cursor.attr, ' ']];
 			for (var i = 0; i < 9; i++) {
 				array = array.concat(array);
@@ -142,7 +142,7 @@
 				var scrollTop = newYLineCoords - scrollDiff;
 				var blank = self.emptyLineArray(1);
 				var g = self.grid;
-				self.grid = g.slice(0,scrollTop).concat(g.slice(scrollTop + 1,newYLineCoords + 1),blank,g.slice(newYLineCoords +1));
+				self.grid = g.slice(0,scrollTop).concat(g.slice(scrollTop + 1,newYLineCoords + 1),[blank],g.slice(newYLineCoords +1));
 				for (var y = scrollTop; y <= newYLineCoords; y++) {
 					self.dirtyLines[y] = true;
 				}
