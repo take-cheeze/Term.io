@@ -219,6 +219,8 @@
 					this.grid[this.cursor.y] = line.slice(0, this.cursor.x);
 				}
 				this.dirtyLines[this.cursor.y] = true;
+			} else if (command === 'M') { //Delete line
+				console.warn('Delete Line: not implemented": ' + arg); //used by emacs
 			} else if (command === 'L') { //Insert line
 				console.warn('Insert line: not implemented'); //used by vi
 			} else if (command === 'P') { //Delete
@@ -691,17 +693,21 @@
 
 		startCursorBlinking: function() {
 			this.stopCursorBlinking();
-			this.cursorBlinkId = window.setInterval(function() {
-				var cursor = $('#' + this.term.cursorId);
-				var attr = this.term.attrFromClass(cursor.attr('class'));
-				attr ^= 0x200;
-				cursor.attr('class', this.term.attrToClass(attr));
+			var cursor = $('#' + this.cursorId);
+			var cursorClass = cursor.attr('class');
+			var invClass = this.attrToClass(this.attrFromClass(cursorClass) ^ 0x200);
+			TermJS.cursorBlinkId = window.setInterval(function() {
+				if(cursor.attr('class') == cursorClass){
+					cursor.removeClass().addClass(invClass);
+				} else {
+					cursor.removeClass().addClass(cursorClass);
+				}
 			}, this.cursorBlinkSpeed);
 		},
 
 		stopCursorBlinking: function() {
 			if (this.cursorBlinkId !== undefined) {
-				window.clearInterval(this.cursorBlinkId);
+				window.clearInterval(TermJS.cursorBlinkId);
 			}
 			this.cursorBlinkId = undefined;
 		},
