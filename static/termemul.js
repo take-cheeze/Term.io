@@ -99,7 +99,7 @@
 					this.dirtyLines[y] = true;
 				}
 			} else if(this.flags.specialScrollRegion && this.scrollRegion[0] > newYScreenCoords){
-				console.log("specialScrollRegion: Not Implemented "+this.scrollRegion+newYScreenCoords);
+				console.warn("specialScrollRegion: Not Implemented "+this.scrollRegion+newYScreenCoords);
 			} else {
 				this.dirtyLines[this.cursor.y] = true;
 				if (newPosition.x !== undefined) {
@@ -160,11 +160,11 @@
 			} else if (command === '(B') {
 				this.cursor.attr &= ~0x300; // <-- HACK SO `top` WORKS PROPERLY
 			} else if (command === '7' || command === '8'){
-				console.log("Save/Restore cursor: not implemented"); 
+				console.warn("Save/Restore cursor: not implemented"); 
 			} else if(command === '=' || command === '>'){ // used in less, vi, reset
-				console.log("Application keypad on/off: not implemented");
+				console.warn("Application keypad on/off: not implemented");
 			} else {
-				console.log('Unhandled escape code ESC ' + command);
+				console.warn('Unhandled escape code ESC ' + command);
 			}
 		},
 		
@@ -214,13 +214,13 @@
 					this.grid[this.cursor.y] = [];
 				} else {
 					if (arg !== 0) {
-						console.log('Unknown argument for CSI "K": ' + arg);
+						console.warn('Unknown argument for CSI "K": ' + arg);
 					}
 					this.grid[this.cursor.y] = line.slice(0, this.cursor.x);
 				}
 				this.dirtyLines[this.cursor.y] = true;
 			} else if (command === 'L') { //Insert line
-				console.log('Insert line: not implemented'); //used by vi
+				console.warn('Insert line: not implemented'); //used by vi
 			} else if (command === 'P') { //Delete
 				arg = this.parseArg(args[0],1);
 				if (arg > 0) {
@@ -229,11 +229,11 @@
 					this.dirtyLines[this.cursor.y] = true;
 				}
 			} else if (command === 'c'){ //Send device attributes
-				console.log('Send device attributes: not implemented ('+JSON.stringify(args)+')'); //used by vi
+				console.warn('Send device attributes: not implemented ('+JSON.stringify(args)+')'); //used by vi
 			} else if (command === 'h') { //Set Mode
 				arg = args[0];
 				if(arg === '4'){ //Insert mode ()
-					console.log('Insert Mode: not implemented');//bash: type "xy " then type over x or y
+					console.warn('Insert Mode: not implemented');//bash: type "xy " then type over x or y
 				}
 				if(arg === '?1'){ //App Cursor Keys
 					this.flags.appCursorKeys = true;
@@ -242,24 +242,24 @@
 					this.cursor.visible = true;
 				} 
 				else if(arg === '?47'){	//Alternate screen buffer
-					console.log('Alternate screen buffer: not implemented');//vi, man, less
+					console.warn('Alternate screen buffer: not implemented');//vi, man, less
 				}
 				else {
-					console.log('Unknown argument for CSI "h": ' + JSON.stringify(arg));
+					console.warn('Unknown argument for CSI "h": ' + JSON.stringify(arg));
 				}
 			} else if (command === 'l') { //Reset Mode
 				arg = args[0];
 				if(arg === '4'){ //Replace Mode
-					console.log('Replace Mode: always on');
+					console.warn('Replace Mode: always on');
 				}
 				if(arg === '?1'){ //Normal Cursor Keys
 					this.flags.appCursorKeys = false;
 				} else if (arg === '?25') { //Cursor invisible
 					this.cursor.visible = false;
 				} else if (arg === '?47'){ //Normal Screen buffer
-					console.log('Alternate screen buffer: not implemented');
+					console.warn('Alternate screen buffer: not implemented');
 				} else {
-					console.log('Unknown argument for CSI "l": ' + JSON.stringify(arg));
+					console.warn('Unknown argument for CSI "l": ' + JSON.stringify(arg));
 				}
 			} else if (command === 'm') { //Set Graphics
 				if(args.length === 0){
@@ -300,7 +300,7 @@
 						this.cursor.attr &= ~0x00F0;
 						this.cursor.attr |= 8 << 4;
 					} else {
-						console.log('Unhandled escape code CSI argument for "m": ' + arg);
+						console.warn('Unhandled escape code CSI argument for "m": ' + arg);
 					}
 				}
 			} else if (command === 'r'){ //Set scrolling region (vi)
@@ -313,7 +313,7 @@
 					this.scrollRegion = [topRow,botRow];
 				}
 			} else {
-				console.log('Unhandled escape code CSI ' + command + ' ' + JSON.stringify(args));
+				console.warn('Unhandled escape code CSI ' + command + ' ' + JSON.stringify(args));
 			}
 		},
 		
@@ -321,7 +321,7 @@
 			if (command.substr(0, 2) === '0;') {
 				document.title = command.substr(2);
 			} else {
-				console.log('Unhandled escape code OSC ' + JSON.stringify(command));
+				console.warn('Unhandled escape code OSC ' + JSON.stringify(command));
 			}
 		},
 		
@@ -359,7 +359,7 @@
 						continue;
 					}
 					//TODO make it so esc esc or something like that wouldn't break term
-					console.log('Unhandled escape codes ' + JSON.stringify(this.buffer));
+					console.error('Unhandled escape codes ' + JSON.stringify(this.buffer));
 				} else {
 					this.buffer = this.buffer.substr(1);
 					if (ch === '\u0007') {
@@ -375,12 +375,12 @@
 					} else if (ch >= ' ') {
 						this.enterChar(ch);
 					} else {
-						console.log('Unhandled character ' + JSON.stringify(ch));
+						console.error('Unhandled character ' + JSON.stringify(ch));
 					}
 				}
 			}
 			if (this.buffer.length > 0) {
-				console.log('Unparsed buffer ' + JSON.stringify(this.buffer));
+				console.warn('Unparsed buffer ' + JSON.stringify(this.buffer));
 			}
 		},
 		
@@ -711,10 +711,7 @@
 				b = $(this.terminalElement).find('> div');
 				this._cachedNumberOfLines = b.size();
 				if(this._cachedNumberOfLines == 2){
-					console.log("NL:"+this._cachedNumberOfLines);
-					b = $(this.terminalElement).find('> div');
-					console.log("HMM"+b.size());
-					
+					b = $(this.terminalElement).find('> div');					
 					window.a = b;
 				}
 			}
