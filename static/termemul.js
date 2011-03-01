@@ -407,6 +407,7 @@
 			this._cachedNumberOfLines = null;
 			this._cachedCharacterWidth = null;
 			this._cachedCharacterHeight = null;
+			this.lastWrite = 0;
 			this.themes = {
 				'Tango': [
 					'#000000', '#cc0000', '#4e9a06', '#c4a000', '#3465a4', '#75507b', '#06989a', '#d3d7cf',
@@ -418,15 +419,15 @@
 					'#000', '#fff' ]
 			};
 			
-			term.bell = function() {
+			this.term.bell = function() {
 				document.getElementById('beep').play(3);
 			};
 			this.term.onreset = this.softReset;
 			
-			$(window).bind('keydown',function(e){TermJS.onKeydown(e)});
-			$(window).bind('keypress',function(e){TermJS.onKeypress(e)});
-			$(window).bind('resize',function(e){TermJS.onResize(e)});
-			$(window).bind('paste',function(e){TermJS.onPaste(e)});
+			$(window).bind('keydown',function(e){TermJS.onKeydown(e);});
+			$(window).bind('keypress',function(e){TermJS.onKeypress(e);});
+			$(window).bind('resize',function(e){TermJS.onResize(e);});
+			$(window).bind('paste',function(e){TermJS.onPaste(e);});
 			
 			this.softReset();
 			this.enableScrollSnapping();
@@ -568,7 +569,7 @@
 			}
 		},
 
-		renderLineAsHtml: function(lineNo) {
+		renderLineAsHtml: function(lineNo, $div) {
 			var cursor = this.term.cursor;
 			var grid = this.term.grid;
 			if (lineNo >= grid.length) {
@@ -580,8 +581,9 @@
 				lineLength = cursor.x + 1;
 			}
 
-			// TODO: Maybe optimize so we merge multiple spans into one if the attributes are equal. Not so easy though...
-			var html = '';
+			var spanOpen = false;
+			var lastStyle = null;
+			var text = "";
 			for (var i = 0; i < lineLength; i++) {
 				var ach = line[i] || [cursor.attr, ' '];
 				var a  = ach[0];
@@ -593,22 +595,68 @@
 				var cursorId = (isCursor ? ' id="' + this.cursorId + '"' : '');
 				var style = (a & 0x400 ? ' style="text-decoration: underline;"' : '');
 
-				html += '<span class="' + this.attrToClass(a) + '"' + cursorId + style + '>' + ch + '</span>';
+				if(a == lastStyle){
+					text += ch;
+				} else {
+					if(spanOpen){
+						spanOpen = false;
+						$div.find('span:last').text(text);
+						text = '';
+					}
+					if(a == 0x88 && !isCursor){
+						text += ch;
+					} else {
+						if(text.length > 0){
+							$div.append(document.createTextNode(text));
+							text = "";
+						}
+						$div.append('<span class="' + this.attrToClass(a) + '"' + cursorId + style + '>');
+						text += ch;
+						spanOpen = true;
+					}
+				}
+				lastStyle = a;	
 			}
-
-			return html;
+			if(text.length > 0){
+				if(spanOpen){
+					$div.find('span:last').text(text);
+				} else {
+					$div.append(document.createTextNode(text));
+				}
+			}
 		},
 
 		renderEachDirtyLine: function(iterator) {
-			for (var lineNo in this.term.dirtyLines) {
-				if(lineNo >= 0){
-					lineNo = lineNo | 0;
-					var html = this.renderLineAsHtml(lineNo);
-					this.ensureLineExists(lineNo);
-					$(this.terminalElement).find('> :eq(' + lineNo + ')').html(html);
+			var linesToRender = [];
+			for (var key in this.term.dirtyLines) {
+				if(key >= 0){
+					linesToRender.push(parseInt(key,10));
 				}
 			}
-			this.dirtyLines = {}; // Reset list of dirty lines after rendering
+			linesToRender.sort(function(a,b){ return (a-b);});
+			for (var i = 0; i < linesToRender.length; i++) {
+				lineNo = linesToRender[i];
+				var missingLines = lineNo - this.numberOfLines() + 1;
+				if (missingLines > 1) {
+					console.error("Missing Lines: should this happen?");
+					var html = '';
+					for (var j = 0; j < missingLines; j++) {
+						html += '<div></div>';
+					}
+					$(this.terminalElement).append(html);
+				}
+				if (missingLines == 1){
+					$div = $("<div>");
+					this.renderLineAsHtml(lineNo,$div);
+					$(this.terminalElement).append($div);
+				} else {					
+					$div = $(this.terminalElement).children().eq(lineNo);
+					$div.empty();
+					this.renderLineAsHtml(lineNo,$div);
+				}
+				this.invalidateCachedNumberOfLines();
+			}
+			this.term.dirtyLines = {}; // Reset list of dirty lines after rendering
 		},
 		
 		scrollSnap: function() {
@@ -623,9 +671,9 @@
 		},
 
 		enableScrollSnapping: function() {
-			$(window).scroll(function(){TermJS.scrollSnap()});
-			$(window).resize(function(){TermJS.scrollSnap()});
-			setTimeout(function(){TermJS.scrollSnap()}, 0);
+			$(window).scroll(function(){TermJS.scrollSnap();});
+			$(window).resize(function(){TermJS.scrollSnap();});
+			setTimeout(function(){TermJS.scrollSnap();}, 0);
 		},
 
 		scrollToBottom: function() {
@@ -660,7 +708,15 @@
 
 		numberOfLines: function() {
 			if (!this._cachedNumberOfLines) {
-				this._cachedNumberOfLines = $(this.terminalElement).find('> *').size() || 1;
+				b = $(this.terminalElement).find('> div');
+				this._cachedNumberOfLines = b.size();
+				if(this._cachedNumberOfLines == 2){
+					console.log("NL:"+this._cachedNumberOfLines);
+					b = $(this.terminalElement).find('> div');
+					console.log("HMM"+b.size());
+					
+					window.a = b;
+				}
 			}
 			return this._cachedNumberOfLines;
 		},
@@ -696,19 +752,7 @@
 			return Math.floor($(window).height() / this.characterHeight());
 		},
 
-		ensureLineExists: function(lineNo) {
-			var missingLines = lineNo - this.numberOfLines() + 2;
-			if (missingLines > 0) {
-				var html = '';
-				for (var i = 0; i < missingLines; i++) {
-					html += '<div class="a0088"></div>';
-				}
-				$(this.terminalElement).append(html);
-				this.invalidateCachedNumberOfLines();
-			}
-		},
-
-		write: function(data) {
+		write: function(data) {			
 			this.term.write(data);
 			this.renderEachDirtyLine();
 			this.scrollToBottom(); // Auto-scroll always on right now.
