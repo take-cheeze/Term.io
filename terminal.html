@@ -29,33 +29,27 @@
 		<script src='termemul.js'></script>
 		<script>
 			$(function() {
-				var term = termemul.JQueryTerminal('#terminal');
-				term.theme(term.themes['Tango']);
-				term.write('Welcome to the rabbit hole…\r\n\r\n');
+				TermJS.theme(TermJS.themes.Tango);
+				TermJS.write('Welcome to the rabbit hole…\r\n\r\n');
 
-				socket = new io.Socket('localhost');
+				socket = new io.Socket();
 				socket.connect();
-				i = 0
-				socket.on('connect', function(){
+				i = 0;
+				socket.on('connect', function(){					
 					socket.send(location.pathname);
-				    term.oninput = function(data) {
+					
+					TermJS.oninput = function(data) {
 						socket.send(data);
 					};
-					catchPaste = function(e) {
-						e.stopPropagation();
-						e.preventDefault();
-						var data = e.originalEvent.clipboardData.getData('text/plain')
-						socket.send(data);
-					}
-					$("body").bind('paste', catchPaste );
 				});
 				socket.on('message', function(data){
-				    term.write(data);
+				    TermJS.write(data);
 				});
-				socket.on('close',function() {
-					term.oninput = null;
-					term.write('\r\n\n\u001B[0;1mCONNECTION CLOSED. \u001B[0m');
-				})
+				socket.on('disconnect',function() {
+					TermJS.oninput = $.noop;
+					TermJS.write('\r\n\n\u001B[0;1mCONNECTION CLOSED. \u001B[0m');
+				});
+				
 
 			/*
 				// Simple echo terminal
