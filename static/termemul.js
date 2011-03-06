@@ -87,9 +87,8 @@
 		
 		setCursor: function(newPosition) {
 			var newYScreenCoords = newPosition.y - this.windowFirstLine() + 1;
-			var scrollDiff = this.scrollRegion[1] - this.scrollRegion[0];
 			if(this.flags.specialScrollRegion && this.scrollRegion[1] < newYScreenCoords){
-				
+				var scrollDiff = this.scrollRegion[1] - this.scrollRegion[0];
 				var newYLineCoords = newPosition.y - 1;
 				var scrollTop = newYLineCoords - scrollDiff;
 				var blank = this.emptyLineArray(1);
@@ -220,7 +219,7 @@
 				}
 				this.dirtyLines[this.cursor.y] = true;
 			} else if (command === 'M') { //Delete line
-				console.warn('Delete Line: not implemented": ' + arg); //used by emacs
+				console.warn('Delete Line: not implemented": ' + arg);
 			} else if (command === 'L') { //Insert line
 				console.warn('Insert line: not implemented'); //used by vi
 			} else if (command === 'P') { //Delete
@@ -231,6 +230,9 @@
 					this.dirtyLines[this.cursor.y] = true;
 				}
 			} else if (command === 'c'){ //Send device attributes
+				if(args[0] === '>'){
+					//\u001B[1;4.8.0;0c  //vt100
+				}
 				console.warn('Send device attributes: not implemented ('+JSON.stringify(args)+')'); //used by vi
 			} else if (command === 'h') { //Set Mode
 				arg = args[0];
@@ -335,7 +337,7 @@
 		},
 		
 		parseBuffer: function() {
-			this.debugLog(this.buffer);
+			//this.debugLog(this.buffer);
 			var currentLength = 0;
 			var matches;
 			while (currentLength !== this.buffer.length && this.buffer.length > 0) {
@@ -361,7 +363,7 @@
 						continue;
 					}
 					//TODO make it so esc esc or something like that wouldn't break term
-					console.error('Unhandled escape codes ' + JSON.stringify(this.buffer));
+					console.warn('Unhandled escape codes ' + JSON.stringify(this.buffer));
 				} else {
 					this.buffer = this.buffer.substr(1);
 					if (ch === '\u0007') {
@@ -405,7 +407,7 @@
 			this.cursorBlinkSpeed = 500;
 			this._colors = null;
 			this.stylesheetId = 'terminal-css';
-			this._cachedScrollTop = null;
+			this._lastScrollTop = null;
 			this._cachedNumberOfLines = null;
 			this._cachedCharacterWidth = null;
 			this._cachedCharacterHeight = null;
@@ -432,7 +434,7 @@
 			$(window).bind('paste',function(e){TermJS.onPaste(e);});
 			
 			this.softReset();
-			this.enableScrollSnapping();
+			//this.enableScrollSnapping();
 			
 		} else {
 			return new Terminal(element);
@@ -667,7 +669,7 @@
 			var snapPosition = Math.floor(Math.floor(position / characterHeight) * characterHeight);
 			if (position !== snapPosition) {
 				$(window).scrollTop(snapPosition);
-				this._cachedScrollTop = snapPosition;
+				this._lastScrollTop = snapPosition;
 			}
 			return false;
 		},
@@ -679,14 +681,14 @@
 		},
 
 		scrollToBottom: function() {
-			var firstLine = this.numberOfLines() - 1 - this.term.rows;
+			var firstLine = this.numberOfLines() - this.term.rows;
 			if (firstLine < 0) {
 				firstLine = 0;
 			}
 			var position = firstLine * this.characterHeight();
-			if (position !== this._cachedScrollTop) {
-				$(window).scrollTop(position);
-				this._cachedScrollTop = position;
+			if (position !== this._lastScrollTop) {
+				$('body').scrollTop(position);
+				this._lastScrollTop = position;
 			}
 			return false;
 		},
