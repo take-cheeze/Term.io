@@ -420,7 +420,27 @@
 				'Linux Terminal': [
 					'#000', '#a00', '#0a0', '#a50', '#00a', '#a0a', '#0aa', '#aaa',
 					'#555', '#f55', '#5f5', '#ff5', '#55f', '#f5f', '#5ff', '#fff',
-					'#000', '#fff' ]
+					'#000', '#fff' ],
+				'Standard VGA': [
+					'#000000', '#aa0000', '#00aa00', '#aa5500', '#0000aa', '#aa00aa', '#00aaaa', '#aaaaaa',
+					'#555555', '#ff5555', '#55ff55', '#ffff55', '#5555ff', '#ff55ff', '#55ffff', '#ffffff',
+					'#ffffff', '#1a1a1a'],
+				'cmd.exe': [
+					'#000000', '#800000', '#080000', '#808000', '#000080', '#800080', '#008080', '#c0c0c0', 
+					'#808080', '#ff0000', '#00ff00', '#ffff00', '#0000ff', '#ff00ff', '#00ffff', '#ffffff',
+					'#ffffff', '#1a1a1a'],
+				'Terminal.app': [
+					'#000000', '#c23621', '#25bc24', '#adad27', '#492ee1', '#d338d3', '#33bbc8', '#cbcccd', 
+					'#818383', '#fc391f', '#25bc24', '#eaec23', '#5833ff', '#f935f8', '#14f0f0', '#e9ebeb',
+					'#ffffff', '#1a1a1a'],
+				'PuTTY': [
+					'#000000', '#bb0000', '#00bb00', '#bbbb00', '#0000bb', '#bb00bb', '#00bbbb', '#bbbbbb', 
+					'#555555', '#ff5555', '#31e722', '#ffff55', '#5555ff', '#ff55ff', '#55ffff', '#ffffff',
+					'#ffffff', '#1a1a1a'],
+				'xterm': [
+					'#000000', '#cd0000', '#00cd00', '#cdcd00', '#0000ee', '#cd00cd', '#00cdcd', '#e5e5e5', 
+					'#7f7f7f', '#ff0000', '#00ff00', '#ffff00', '#5c5cff', '#ff00ff', '#00ffff', '#ffffff',
+					'#ffffff', '#1a1a1a']	
 			};
 			
 			this.term.bell = function() {
@@ -434,7 +454,7 @@
 			$(window).bind('paste',function(e){TermJS.onPaste(e);});
 			
 			this.softReset();
-			//this.enableScrollSnapping();
+			this.enableScrollSnapping();
 			
 		} else {
 			return new Terminal(element);
