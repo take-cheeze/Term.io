@@ -5,23 +5,16 @@
 		<title>JS-Term</title>
 		<link rel="shortcut icon" href="/favicon.ico">
 		<style>
-			html {
-				overflow-y: scroll;
-			}
-			html, body {
+			body {
 				padding: 0;
-				padding-bottom: 30px;
 				margin: 0;
-				font-family: monospace;
 			}
-			#terminal {
+			#terminal div{
 				white-space: pre;
 				overflow: hidden;
-				/*max-height: 704px;*/ /* if you need to disable scrollbar, ie. terminal codes does this inside Nano, Vim, Emacs, etc. */
-			}
-			#terminal > div {
-				height: 1.25em;
-				line-height: 1.25em;
+				font-family: Menlo, monospace;
+				font-size:11px;
+				height: 14px;
 			}
 		</style>
 		<script src='jquery-1.5.min.js'></script>
@@ -29,7 +22,7 @@
 		<script src='termemul.js'></script>
 		<script>
 			$(function() {
-				TermJS.theme(TermJS.themes.Tango);
+				TermJS.theme(TermJS.themes['Terminal.app']);
 				TermJS.write('Welcome to the rabbit hole…\r\n\r\n');
 
 				socket = new io.Socket();
