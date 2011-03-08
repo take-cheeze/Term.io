@@ -5,16 +5,21 @@
 		<title>JS-Term</title>
 		<link rel="shortcut icon" href="/favicon.ico">
 		<style>
-			body {
+			 body {
+				overflow-y: scroll;
 				padding: 0;
 				margin: 0;
 			}
-			#terminal div{
+			#terminal div{				
 				white-space: pre;
 				overflow: hidden;
 				font-family: Menlo, monospace;
 				font-size:11px;
 				height: 14px;
+			}
+			#beep {
+				position:absolute;
+				top:0px;
 			}
 		</style>
 		<script src='jquery-1.5.min.js'></script>
@@ -23,40 +28,39 @@
 		<script>
 			$(function() {
 				TermJS.theme(TermJS.themes['Terminal.app']);
-				TermJS.write('Welcome to the rabbit hole…\r\n\r\n');
+				TermJS.output('Welcome to the rabbit hole…\r\n\r\n');
 
 				socket = new io.Socket();
 				socket.connect();
-				i = 0;
+
 				socket.on('connect', function(){					
 					socket.send(location.pathname);
-					
-					TermJS.oninput = function(data) {
-						socket.send(data);
-					};
-				});
-				socket.on('message', function(data){
-				    TermJS.write(data);
-				});
-				socket.on('disconnect',function() {
-					TermJS.oninput = $.noop;
-					TermJS.write('\r\n\n\u001B[0;1mCONNECTION CLOSED. \u001B[0m');
+					TermJS.setStdin(function(data){socket.send(data);});
 				});
 				
+				socket.on('message', function(data){
+				    TermJS.output(data);
+				});
+				
+				socket.on('disconnect',function() {
+					TermJS.setStdin($.noop);
+					TermJS.output('\r\n\n\u001B[0;1mCONNECTION CLOSED. \u001B[0m');
+				});
+		
 
 			/*
 				// Simple echo terminal
-				term.write('\r\n> ');
-				term.oninput = function(data) {
-					term.write(data.replace('\r', '\r\n> ').replace('\b', '\b \b'));
-				};
+				TermJS.output('\r\n> ');
+				TermJS.setStdin( function(data) {
+					TermJS.output(data.replace('\r', '\r\n> ').replace('\b', '\b \b'));
+				});
 			*/
 
 			});
 		</script>
 	</head>
-	<body class='a0088'>
-		<div id='terminal'></div>
+	<body>
+		<div id='terminal' class='a0088'></div>
 		<object id="beep" type="application/x-shockwave-flash" data="flashbeep-general.swf" width="1" height="1">
 			<param name="movie" value="flashbeep-general.swf" />
 			<param name="FlashVars" value="onLoad=isReady" />

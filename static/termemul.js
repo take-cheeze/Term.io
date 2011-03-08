@@ -393,7 +393,28 @@
 			this.parseBuffer();
 		}
 	};
+		
+	var debounce = function (func, minwait, maxwait, context) {
+	    var timeout;
+		var lasttime;
+	    return function(){
+	        var args = arguments;
+			var now = (new Date()).getTime();
+			var interval = lasttime ? now - lasttime : 0;
+			var nextWait = Math.min(Math.max(minwait,interval*2),maxwait);
+			
+			function execute() {
+		        func.apply(context, args);
+		        timeout = null; 
+		    }
+	        clearTimeout(timeout);
+	        timeout = setTimeout(execute, nextWait); 
+			lasttime = now;
+	    };
+	};
 
+	// Constants
+	var INPUT = 1, OUTPUT = 0;
 
 	function Terminal(element){
 		if ( this instanceof Terminal ) {
@@ -402,16 +423,17 @@
 			this.cursorId = 'cursor';
 			this.term = lowLevelTerm;
 			this.terminalElement = element;
-			this.oninput = $.noop;
+			this._stdin = $.noop;
 			this.cursorBlinkId = undefined;
-			this.cursorBlinkSpeed = 500;
 			this._colors = null;
 			this.stylesheetId = 'terminal-css';
 			this._lastScrollTop = null;
+			this._lastScrollSnap = null;
 			this._cachedNumberOfLines = null;
 			this._cachedCharacterWidth = null;
 			this._cachedCharacterHeight = null;
 			this.lastWrite = 0;
+			this._lastMessageType = OUTPUT;
 			this.themes = {
 				'Tango': [
 					'#000000', '#cc0000', '#4e9a06', '#c4a000', '#3465a4', '#75507b', '#06989a', '#d3d7cf',
@@ -463,10 +485,19 @@
 
 	
 	Terminal.prototype = {
-
+		
+		setStdin: function(fn) {
+			this._stdin = fn;
+		},
+		
 		softReset: function() {
 			$(this.terminalElement).html('<div class="a0088"></div>');
-			(this.invalidateCachedNumberOfLines || $.noop)();
+			this.invalidateCachedNumberOfLines();
+		},
+		
+		input: function(data){
+			TermJS._lastMessageType = INPUT;
+			TermJS._stdin(data);
 		},
 		
 		onKeydown: function(e) {
@@ -480,20 +511,19 @@
 			var SS3Seq = '\u001BO';
 			var CSISeq = '\u001B[';
 			var arrowSeq = this.term.flags.appCursorKeys ? SS3Seq : CSISeq;
-			var oninput = TermJS.oninput;
 			if (!mods && (e.which === 8 || e.which === 9 || e.which === 27)) { //backspace tab esc
 				var ch = String.fromCharCode(e.which);
-				oninput(ch);
+				TermJS.input(ch);
 			} else if (!mods && e.which === 37) { // Left arrow
-				oninput(arrowSeq+'D');
+				TermJS.input(arrowSeq+'D');
 			} else if (!mods && e.which === 38) { // Up arrow
-				oninput(arrowSeq+'A');
+				TermJS.input(arrowSeq+'A');
 			} else if (!mods && e.which === 39) { // Right arrow
-				oninput(arrowSeq+'C');
+				TermJS.input(arrowSeq+'C');
 			} else if (!mods && e.which === 40) { // Down arrow
-				oninput(arrowSeq+'B');
+				TermJS.input(arrowSeq+'B');
 			} else if (onlyCtrl && e.which >= 65 && e.which <= 90) { // make Ctrl + A-Z work for lowercase
-				oninput(String.fromCharCode(e.which - 64));
+				TermJS.input(String.fromCharCode(e.which - 64));
 			} else if (ctrlShift && e.which === 84) { // Ctrl Shift t to open  new tab
 				window.open(location.href);
 			} else if (ctrlShift && e.which === 87) { // Ctrl Shift w to close tab
@@ -510,7 +540,7 @@
 		onKeypress: function(e) {
 			//console.log('keypress... ' + e.which);
 			var ch = String.fromCharCode(e.which);
-			TermJS.oninput(ch);
+			TermJS.input(ch);
 			e.preventDefault();
 			return false;
 		},
@@ -525,7 +555,7 @@
 			e.stopPropagation();
 			e.preventDefault();
 			var data = e.originalEvent.clipboardData.getData('text/plain');
-			TermJS.oninput(data);
+			TermJS.input(data);
 		},
 
 		applyTheme: function(css) {
@@ -686,31 +716,38 @@
 		scrollSnap: function() {
 			var characterHeight = this.characterHeight();
 			var position = $(window).scrollTop();
-			var snapPosition = Math.floor(Math.floor(position / characterHeight) * characterHeight);
-			if (position !== snapPosition) {
+			var snapPosition = Math.floor(position / characterHeight) * characterHeight;
+			if (snapPosition !== this._lastScrollSnap) {
 				$(window).scrollTop(snapPosition);
-				this._lastScrollTop = snapPosition;
+				this._lastScrollSnap = snapPosition;
 			}
 			return false;
 		},
 
 		enableScrollSnapping: function() {
-			$(window).scroll(function(){TermJS.scrollSnap();});
-			$(window).resize(function(){TermJS.scrollSnap();});
-			setTimeout(function(){TermJS.scrollSnap();}, 0);
+			var debouncedScrollSnap = debounce(this.scrollSnap,150, 300, this);
+			$(window).scroll(function(){debouncedScrollSnap();});
+			$(window).resize(function(){debouncedScrollSnap();});
 		},
 
 		scrollToBottom: function() {
+			// if there is output that is not a direct response to input and we are scrolling up,
+			// don't scroll down on output
+			if(this._lastMessageType == OUTPUT && $(window).scrollTop() != this._lastScrollTop){
+				return
+			}
 			var firstLine = this.numberOfLines() - this.term.rows;
 			if (firstLine < 0) {
 				firstLine = 0;
 			}
 			var position = firstLine * this.characterHeight();
 			if (position !== this._lastScrollTop) {
-				$('body').scrollTop(position);
+				// Make room to scroll
+				$('html').height(position + $(window).height());
+				$(window).scrollTop(position);
 				this._lastScrollTop = position;
 			}
-			return false;
+			return;
 		},
 
 		startCursorBlinking: function() {
@@ -718,19 +755,17 @@
 			var cursor = $('#' + this.cursorId);
 			var cursorClass = cursor.attr('class');
 			var invClass = this.attrToClass(this.attrFromClass(cursorClass) ^ 0x200);
-			TermJS.cursorBlinkId = window.setInterval(function() {
+			this.cursorBlinkId = window.setInterval(function() {
 				if(cursor.attr('class') == cursorClass){
 					cursor.removeClass().addClass(invClass);
 				} else {
 					cursor.removeClass().addClass(cursorClass);
 				}
-			}, this.cursorBlinkSpeed);
+			}, 500);
 		},
 
 		stopCursorBlinking: function() {
-			if (this.cursorBlinkId !== undefined) {
-				window.clearInterval(TermJS.cursorBlinkId);
-			}
+			window.clearInterval(this.cursorBlinkId);
 			this.cursorBlinkId = undefined;
 		},
 
@@ -753,16 +788,14 @@
 
 		characterWidth: function() {
 			if (!this._cachedCharacterWidth) {
-				var ch = $(this.terminalElement).find('> * > *');
-				this._cachedCharacterWidth = ch.innerWidth() || 1; // TODO: Is this really stable crossbrowser?
+				this._cachedCharacterWidth = $('#'+this.cursorId).innerWidth();
 			}
 			return this._cachedCharacterWidth;
 		},
 
 		characterHeight: function() {
 			if (!this._cachedCharacterHeight) {
-				var line = $(this.terminalElement).find('> *');
-				this._cachedCharacterHeight = line.innerHeight() || 1; // TODO: Is this really stable crossbrowser?
+				this._cachedCharacterHeight = $(this.terminalElement).find('div').innerHeight();
 			}
 			return this._cachedCharacterHeight;
 		},
@@ -777,11 +810,12 @@
 			return Math.floor($(window).height() / this.characterHeight());
 		},
 
-		write: function(data) {			
+		output: function(data) {			
 			this.term.write(data);
 			this.renderEachDirtyLine();
-			this.scrollToBottom(); // Auto-scroll always on right now.
+			this.scrollToBottom();
 			//this.startCursorBlinking();
+			this._lastMessageType = OUTPUT;
 		}
 	};
 	
