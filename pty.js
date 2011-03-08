@@ -6,7 +6,7 @@ var connect = require('connect');
 var io = require('socket.io');
 
 var server = connect.createServer(
-    connect.staticProvider(__dirname + '/static'),
+    connect.static(__dirname + '/static'),
 	function(request, response) {
 		fs.readFile('./terminal.html', function(err, buffer) {
 			response.writeHead(200, {
