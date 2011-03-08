@@ -1,4 +1,5 @@
 (function() {
+	"use strict"
 	
 	function term(){
 		if ( this instanceof term ) {
@@ -689,7 +690,7 @@
 			}
 			linesToRender.sort(function(a,b){ return (a-b);});
 			for (var i = 0; i < linesToRender.length; i++) {
-				lineNo = linesToRender[i];
+				var lineNo = linesToRender[i];
 				var missingLines = lineNo - this.numberOfLines() + 1;
 				if (missingLines > 1) {
 					console.error("Missing Lines: should this happen?");
@@ -700,7 +701,7 @@
 					$(this.terminalElement).append(html);
 				}
 				if (missingLines == 1){
-					$div = $("<div>");
+					var $div = $("<div>");
 					this.renderLineAsHtml(lineNo,$div);
 					$(this.terminalElement).append($div);
 				} else {					
@@ -771,7 +772,7 @@
 
 		numberOfLines: function() {
 			if (!this._cachedNumberOfLines) {
-				b = $(this.terminalElement).find('> div');
+				var b = $(this.terminalElement).find('> div');
 				this._cachedNumberOfLines = b.size();
 				if(this._cachedNumberOfLines == 2){
 					b = $(this.terminalElement).find('> div');					

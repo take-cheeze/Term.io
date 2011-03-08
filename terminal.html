@@ -27,10 +27,12 @@
 		<script src='termemul.js'></script>
 		<script>
 			$(function() {
+				"use strict"
+				
 				TermJS.theme(TermJS.themes['Terminal.app']);
 				TermJS.output('Welcome to the rabbit hole…\r\n\r\n');
 
-				socket = new io.Socket();
+				var socket = new io.Socket();
 				socket.connect();
 
 				socket.on('connect', function(){					
