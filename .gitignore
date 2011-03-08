@@ -4,3 +4,7 @@
 # Vi
 *.swp
 *.swo
+
+# SSL
+privatekey.pem
+certificate.pem
