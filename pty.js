@@ -1,5 +1,5 @@
 
-// "use strict"
+"use strict";
 var spawn = require('child_process').spawn;
 var fs = require('fs');
 var connect = require('connect');
@@ -20,7 +20,14 @@ if(useSSL){
 	server = connect();
 }
 
+server.use(function(req, res, next){
+    if (/^\/\w+$/.test(req.url)) {
+        req.url = '/';
+    }
+    next();
+});
 server.use(connect['static'](__dirname + '/static'));
+
 var io = io.listen(server);
 
 var ptys = {};
