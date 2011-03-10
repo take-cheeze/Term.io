@@ -8,7 +8,7 @@ var io = require('socket.io');
 var port = parseInt(process.argv[2] || '8080', 10);
 var sslKeyPath = 'privatekey.pem';
 var sslCertPath = 'certificate.pem';
-var useSSL = true;
+var useSSL = false;
 
 var server;
 if(useSSL){
@@ -33,18 +33,23 @@ var io = io.listen(server);
 var ptys = {};
 io.on('connection', function(client){
 	client.initialized = false;
+	console.log(client);
 	client.on('message', function(data){
 		//The first message sent by the client must be the term they want
 		if(!client.initialized){
 			var path = data;
-			var term = spawn('python', ['-c', 'import pty;pty.spawn(["bash","-l"])']);
-			// or spawn login or just "bash"
-			//It might be better to link to the connections rather than storing a count
-			ptys[path] = ptys[path] || {
-				'term': term,
-				'connections':0,
-				'path':path
-			};
+			var term;
+			if(!ptys[path]){
+				term = spawn('python', ['-c', 'import pty;pty.spawn(["bash","-l"])']);
+				// or spawn login or just "bash"
+				//It might be better to link to the connections rather than storing a count
+				ptys[path] = ptys[path] || {
+					'term': term,
+					'connections':0,
+					'path':path
+				};
+			}
+			term = ptys[path].term
 			ptys[path].connections++;
 			console.log('Connection open on <' + data + '> (' + ptys[path].connections + ' connected)');
 			var pty = ptys[path];
