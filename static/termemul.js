@@ -1,5 +1,5 @@
 (function() {
-	"use strict"
+	"use strict";
 	
 	function term(){
 		if ( this instanceof term ) {
@@ -66,6 +66,13 @@
 			return Math.max(0, this.grid.length - this.rows);
 		},
 		
+		// Takes a screen line number and returns the line number in the array
+		// Accounts for scroll history
+		// Line Coords are 0 indexed, Screen Coords are 1 indexed
+		toLineCoords: function(line) {
+			return this.windowFirstLine() + line - 1;
+		},
+		
 		emptyLineArray: function(maxSize) {
 			maxSize = maxSize || 80;
 			
@@ -74,6 +81,14 @@
 				array = array.concat(array);
 			}
 			return array.slice(0, maxSize);
+		},
+		
+		blankLines: function(lines) {
+			var blanks = [];
+			for(var i = 0; i < lines; i++){
+				blanks.push([]);
+			}
+			return blanks;
 		},
 		
 		replaceInArray: function(array, index, replacement) {
@@ -88,16 +103,8 @@
 		
 		setCursor: function(newPosition) {
 			var newYScreenCoords = newPosition.y - this.windowFirstLine() + 1;
-			if(this.flags.specialScrollRegion && this.scrollRegion[1] < newYScreenCoords){
-				var scrollDiff = this.scrollRegion[1] - this.scrollRegion[0];
-				var newYLineCoords = newPosition.y - 1;
-				var scrollTop = newYLineCoords - scrollDiff;
-				var blank = this.emptyLineArray(1);
-				var g = this.grid;
-				this.grid = g.slice(0,scrollTop).concat(g.slice(scrollTop + 1,newYLineCoords + 1),[blank],g.slice(newYLineCoords +1));
-				for (var y = scrollTop; y <= newYLineCoords; y++) {
-					this.dirtyLines[y] = true;
-				}
+			if(this.flags.specialScrollRegion && this.scrollRegion[1] < newYScreenCoords){			
+				this.deleteLines(1);
 			} else if(this.flags.specialScrollRegion && this.scrollRegion[0] > newYScreenCoords){
 				console.warn("specialScrollRegion: Not Implemented "+this.scrollRegion+newYScreenCoords);
 			} else {
@@ -148,6 +155,18 @@
 			this.cursor.attr = 0x0088;
 			this.cursor.visible = true;
 			this.flags.appCursorKeys = false;
+		},
+		
+		deleteLines: function(num) {
+			// This may only work for the way vim uses delete
+			var scrollTop = this.toLineCoords(this.scrollRegion[0]);
+			var scrollBotton = this.toLineCoords(this.scrollRegion[1]);
+			var blanks = this.blankLines(num);
+			var g = this.grid;
+			this.grid = g.slice(0,scrollTop).concat(g.slice(scrollTop + num, scrollBotton + 1),blanks,g.slice(scrollBotton + 1));
+			for (var y = scrollTop; y <= scrollBotton; y++) {
+				this.dirtyLines[y] = true;
+			}
 		},
 		
 		parseArg: function(arg, defaultVal){
@@ -220,9 +239,17 @@
 				}
 				this.dirtyLines[this.cursor.y] = true;
 			} else if (command === 'M') { //Delete line
-				console.warn('Delete Line: not implemented": ' + arg);
+				this.deleteLines(this.parseArg(args[0],1));
 			} else if (command === 'L') { //Insert line
-				console.warn('Insert line: not implemented'); //used by vi
+				arg = this.parseArg(args[0],1);
+				var scrollTop = this.toLineCoords(this.scrollRegion[0]);
+				var scrollBotton = this.toLineCoords(this.scrollRegion[1]);
+				var blanks = this.blankLines(arg);
+				var g = this.grid;
+				this.grid = g.slice(0,scrollTop).concat(blanks,g.slice(scrollTop,scrollBotton),g.slice(scrollBotton + 1));
+				for (var y = scrollTop; y <= scrollBotton; y++) {
+					this.dirtyLines[y] = true;
+				}
 			} else if (command === 'P') { //Delete
 				arg = this.parseArg(args[0],1);
 				if (arg > 0) {
@@ -434,7 +461,7 @@
 			this._cachedCharacterWidth = null;
 			this._cachedCharacterHeight = null;
 			this.lastWrite = 0;
-			this._lastMessageType = OUTPUT;
+			this._lastMessageType = INPUT;
 			this.themes = {
 				'Tango': [
 					'#000000', '#cc0000', '#4e9a06', '#c4a000', '#3465a4', '#75507b', '#06989a', '#d3d7cf',
@@ -700,8 +727,8 @@
 					}
 					$(this.terminalElement).append(html);
 				}
+				var $div = $("<div>");
 				if (missingLines == 1){
-					var $div = $("<div>");
 					this.renderLineAsHtml(lineNo,$div);
 					$(this.terminalElement).append($div);
 				} else {					
@@ -735,7 +762,7 @@
 			// if there is output that is not a direct response to input and we are scrolling up,
 			// don't scroll down on output
 			if(this._lastMessageType == OUTPUT && $(window).scrollTop() != this._lastScrollTop){
-				return
+				return;
 			}
 			var firstLine = this.numberOfLines() - this.term.rows;
 			if (firstLine < 0) {
