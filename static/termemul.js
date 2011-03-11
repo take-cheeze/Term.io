@@ -7,6 +7,8 @@
 			this.grid = [];
 			this.dirtyLines = {};
 			this.cursor = { x: 0, y: 0, attr: 0x0088, visible: true };
+			this._savedCursor = {};
+			this._savedGrid = {};
 			this.buffer = '';
 			this.onreset = noop;
 			this.columns = 80;
@@ -14,7 +16,11 @@
 			this.bell = noop;
 			this.scrollRegion = [0,0];
 			this.flags = {	appCursorKeys: false,
-						specialScrollRegion: false};
+							specialScrollRegion: false,
+							alternateScreenBuffer: false,
+							savedCursor: false,
+							insertMode: false,
+							appKeypad: false};
 		} else {
 			return new term();
 		}
@@ -178,10 +184,17 @@
 				this.reset();
 			} else if (command === '(B') {
 				this.cursor.attr &= ~0x300; // <-- HACK SO `top` WORKS PROPERLY
-			} else if (command === '7' || command === '8'){
-				console.warn("Save/Restore cursor: not implemented"); 
-			} else if(command === '=' || command === '>'){ // used in less, vi, reset
-				console.warn("Application keypad on/off: not implemented");
+			} else if (command === '7') {
+				this.flags.savedCursor = true;
+				console.warn("Save cursor: not implemented"); 
+			} else if (command === '8') {
+				this.flags.savedCursor = false;
+				console.warn("Restore cursor: not implemented"); 
+			} else if(command === '=') {
+				this.flags.appKeypad = true;
+				console.warn("Application keypad on: not implemented");
+			} else if(command === '>') {
+				this.flags.appKeypad = false;
 			} else {
 				console.warn('Unhandled escape code ESC ' + command);
 			}
@@ -265,6 +278,7 @@
 			} else if (command === 'h') { //Set Mode
 				arg = args[0];
 				if(arg === '4'){ //Insert mode ()
+					this.flags.insertMode = true;
 					console.warn('Insert Mode: not implemented');//bash: type "xy " then type over x or y
 				}
 				if(arg === '?1'){ //App Cursor Keys
@@ -274,6 +288,7 @@
 					this.cursor.visible = true;
 				} 
 				else if(arg === '?47'){	//Alternate screen buffer
+					this.flags.alternateScreenBuffer = true;
 					console.warn('Alternate screen buffer: not implemented');//vi, man, less
 				}
 				else {
@@ -282,14 +297,13 @@
 			} else if (command === 'l') { //Reset Mode
 				arg = args[0];
 				if(arg === '4'){ //Replace Mode
-					console.warn('Replace Mode: always on');
-				}
-				if(arg === '?1'){ //Normal Cursor Keys
+					this.flags.insertMode = false;
+				} else if(arg === '?1'){ //Normal Cursor Keys
 					this.flags.appCursorKeys = false;
 				} else if (arg === '?25') { //Cursor invisible
 					this.cursor.visible = false;
 				} else if (arg === '?47'){ //Normal Screen buffer
-					console.warn('Alternate screen buffer: not implemented');
+					this.flags.alternateScreenBuffer = false;
 				} else {
 					console.warn('Unknown argument for CSI "l": ' + JSON.stringify(arg));
 				}
