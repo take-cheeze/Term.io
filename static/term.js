@@ -6,7 +6,7 @@
 			this.grid = [];
 			this.dirtyLines = {};
 			this.cursor = { x: 0, y: 0, attr: 0x0088, visible: true };
-			this._savedCursor = {};
+			this.savedCursor = {};
 			this._savedGrid = {};
 			this.buffer = '';
 			this.columns = 80;
@@ -16,7 +16,6 @@
 			this.flags = {	appCursorKeys: false,
 							specialScrollRegion: false,
 							alternateScreenBuffer: false,
-							savedCursor: false,
 							insertMode: false,
 							appKeypad: false};
 		} else {
@@ -87,7 +86,11 @@
 		// Accounts for scroll history
 		// Line Coords are 0 indexed, Screen Coords are 1 indexed
 		toLineCoords: function(line) {
-			return this.windowFirstLine() + line - 1;
+			return line - 1 + this.windowFirstLine();
+		},
+		
+		toScreenCoords: function(line) {
+			return line + 1 - this.windowFirstLine();
 		},
 		
 		emptyLineArray: function(maxSize) {
@@ -219,11 +222,12 @@
 			} else if (command === '(B') {
 				this.cursor.attr &= ~0x300; // <-- HACK SO `top` WORKS PROPERLY
 			} else if (command === '7') {
-				this.flags.savedCursor = true;
-				console.warn("Save cursor: not implemented"); 
+				this.savedCursor = _.clone(this.cursor);
+				this.savedCursor.y = this.toScreenCoords(this.savedCursor.y);
 			} else if (command === '8') {
-				this.flags.savedCursor = false;
-				console.warn("Restore cursor: not implemented"); 
+				this.savedCursor.y = this.toLineCoords(this.savedCursor.y);
+				this.cursor = this.savedCursor;
+				this.savedCursor = {};
 			} else if(command === '=') {
 				this.flags.appKeypad = true;
 				console.warn("Application keypad on: not implemented");
