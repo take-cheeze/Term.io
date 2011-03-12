@@ -12,7 +12,7 @@
 			this.columns = 80;
 			this.rows = 24;
 			this.bell = function(){};
-			this.scrollRegion = [0,0];
+			this.scrollRegion = [1,24];
 			this.flags = {	appCursorKeys: false,
 							specialScrollRegion: false,
 							alternateScreenBuffer: false,
@@ -195,12 +195,26 @@
 			}
 		},
 		
+		insertLines: function(num) {
+			var scrollTop = this.toLineCoords(this.scrollRegion[0]);
+			var scrollBotton = this.toLineCoords(this.scrollRegion[1]);
+			var blanks = this.blankLines(num);
+			var g = this.grid;
+			this.grid = g.slice(0,scrollTop).concat(blanks,g.slice(scrollTop,scrollBotton),g.slice(scrollBotton + 1));
+			for (var line = scrollTop; line <= scrollBotton; line++) {
+				this.dirtyLines[line] = true;
+			}
+		},
+		
 		parseArg: function(arg, defaultVal){
 			return parseInt(arg || defaultVal, 10) || defaultVal;
 		},
 		
 		escapeCodeESC: function(command) {
-			if (command === 'c') {
+			if (command === 'M') {
+				// This only works for the way less uses it
+				this.insertLines(1);
+			} else if (command === 'c') {
 				this.reset();
 			} else if (command === '(B') {
 				this.cursor.attr &= ~0x300; // <-- HACK SO `top` WORKS PROPERLY
@@ -274,15 +288,7 @@
 			} else if (command === 'M') { //Delete line
 				this.deleteLines(this.parseArg(args[0],1));
 			} else if (command === 'L') { //Insert line
-				arg = this.parseArg(args[0],1);
-				var scrollTop = this.toLineCoords(this.scrollRegion[0]);
-				var scrollBotton = this.toLineCoords(this.scrollRegion[1]);
-				var blanks = this.blankLines(arg);
-				var g = this.grid;
-				this.grid = g.slice(0,scrollTop).concat(blanks,g.slice(scrollTop,scrollBotton),g.slice(scrollBotton + 1));
-				for (line = scrollTop; line <= scrollBotton; line++) {
-					this.dirtyLines[line] = true;
-				}
+				this.insertLines(this.parseArg(args[0],1));
 			} else if (command === 'P') { //Delete
 				arg = this.parseArg(args[0],1);
 				if (arg > 0) {
