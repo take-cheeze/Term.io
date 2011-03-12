@@ -444,13 +444,11 @@
 			this.parseBuffer();
 		}
 	};
-	
-	var root = this;
-	
+		
 	if (typeof module !== 'undefined' && module.exports) {
 	    module.exports = Term;
 	} else {
-	    root.Term = Term;
+	    window.Term = Term;
 	}
 	
 })();

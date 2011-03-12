@@ -11,6 +11,8 @@ body {
 	top:0px;
 	height: 336px;
 	width: 560px;
+	padding:0px;
+	margin:auto;
 	background-color:white;
 }
 #terminal{
@@ -28,4 +30,23 @@ body {
 #beep {
 	position:absolute;
 	top:0px;
+}
+.loading-container {
+	position:absolute;
+	left:0px;
+	top:0px;
+	height: 336px;
+	width: 560px;
+	padding:0px;
+	margin:auto;
+}
+.loading {
+	top:50%;
+	margin: -16px auto auto auto;
+	z-index: 2;
+	position:relative;
+	height: 32px;
+	width: 32px;
+	background-image:url('ajax-loader.gif');
+	background-repeat: no-repeat;
 }

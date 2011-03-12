@@ -8,6 +8,8 @@
 	<body>
 		<div id='terminal' class='a0088'></div>
 		<div id='term-bg'></div>
+		<div class='loading-container'><div class='loading'></div></div>
+		<div id='loading'></div>
 		<object id="beep" type="application/x-shockwave-flash" data="flashbeep-general.swf" width="1" height="1">
 			<param name="movie" value="flashbeep-general.swf" />
 			<param name="FlashVars" value="onLoad=isReady" />
@@ -22,7 +24,6 @@
 				"use strict";
 				
 				TermJS.theme(TermJS.themes['Terminal.app']);
-				TermJS.output('Welcome to the rabbit hole…\r\n\r\n');
 
 				var socket = new io.Socket(location.hostname, {secure:location.protocol == "https:"});
 				socket.connect();
@@ -30,6 +31,7 @@
 				socket.on('connect', function(){					
 					socket.send(location.pathname);
 					TermJS.setStdin(function(data){socket.send(data);});
+					$('.loading-container').hide();
 				});
 				
 				socket.on('message', function(data){
@@ -38,7 +40,7 @@
 				
 				socket.on('disconnect',function() {
 					TermJS.setStdin($.noop);
-					TermJS.output('\r\n\n\u001B[0;1mCONNECTION CLOSED. \u001B[0m');
+					$('.loading-container').show();
 				});
 
 			/*
