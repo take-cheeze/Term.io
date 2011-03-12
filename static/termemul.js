@@ -3,17 +3,15 @@
 	
 	function term(){
 		if ( this instanceof term ) {
-			var noop = function() {};
 			this.grid = [];
 			this.dirtyLines = {};
 			this.cursor = { x: 0, y: 0, attr: 0x0088, visible: true };
 			this._savedCursor = {};
 			this._savedGrid = {};
 			this.buffer = '';
-			this.onreset = noop;
 			this.columns = 80;
 			this.rows = 24;
-			this.bell = noop;
+			this.bell = function(){};
 			this.scrollRegion = [0,0];
 			this.flags = {	appCursorKeys: false,
 							specialScrollRegion: false,
@@ -44,12 +42,10 @@
 			if (lineNo === this.cursor.y && this.cursor.x + 1 > lineLength) {
 				lineLength = this.cursor.x + 1;
 			}
-			
 			var text = '';
 			for (var i = 0; i < lineLength; i++) {
 				text += line[i][1] | ' ';
 			}
-
 			return text;
 		},
 		
@@ -153,14 +149,12 @@
 		},
 		
 		reset: function() {
-			this.onreset();
 			this.grid = [];
 			this.dirtyLines = {};
-			this.cursor.x = 0;
-			this.cursor.y = 0;
-			this.cursor.attr = 0x0088;
-			this.cursor.visible = true;
-			this.flags.appCursorKeys = false;
+			this.cursor = { x: 0, y: 0, attr: 0x0088, visible: true };
+			_(this.flags).each(function(val,key){
+				this.flags[key] = false;
+			});
 		},
 		
 		deleteLines: function(num) {
@@ -216,9 +210,9 @@
 			} else if (command === 'G') { //Move cursor to col n
 				this.setCursor({ x: arg });
 			} else if (command === 'H' || command === 'f') { //Move cursor to pos x,y
-				var newY = this.parseArg(args[0],1) - 1;
+				var newY = this.parseArg(args[0],1);
 				var newX = this.parseArg(args[1],1) - 1;
-				this.setCursor({ x: newX, y: newY + this.windowFirstLine() });
+				this.setCursor({ x: newX, y: this.toLineCoords(newY)});
 			} else if (command === 'J') { //Clear screen
 				var firstLine  = this.windowFirstLine();
 				var lastLine   = Math.min(firstLine + this.rows, this.grid.length) - 1;
@@ -260,8 +254,8 @@
 				var blanks = this.blankLines(arg);
 				var g = this.grid;
 				this.grid = g.slice(0,scrollTop).concat(blanks,g.slice(scrollTop,scrollBotton),g.slice(scrollBotton + 1));
-				for (var y = scrollTop; y <= scrollBotton; y++) {
-					this.dirtyLines[y] = true;
+				for (line = scrollTop; line <= scrollBotton; line++) {
+					this.dirtyLines[line] = true;
 				}
 			} else if (command === 'P') { //Delete
 				arg = this.parseArg(args[0],1);
@@ -435,46 +429,29 @@
 			this.parseBuffer();
 		}
 	};
-		
-	var debounce = function (func, minwait, maxwait, context) {
-	    var timeout;
-		var lasttime;
-	    return function(){
-	        var args = arguments;
-			var now = (new Date()).getTime();
-			var interval = lasttime ? now - lasttime : 0;
-			var nextWait = Math.min(Math.max(minwait,interval*2),maxwait);
-			
-			function execute() {
-		        func.apply(context, args);
-		        timeout = null; 
-		    }
-	        clearTimeout(timeout);
-	        timeout = setTimeout(execute, nextWait); 
-			lasttime = now;
-	    };
-	};
 
 	// Constants
 	var INPUT = 1, OUTPUT = 0;
 
-	function Terminal(element){
+	function Terminal(){
 		if ( this instanceof Terminal ) {
 			var lowLevelTerm = term();
+			lowLevelTerm.bell = function() {
+				document.getElementById('beep').play(3);
+			};
 			
+			this.terminalId = 'terminal';
 			this.cursorId = 'cursor';
-			this.term = lowLevelTerm;
-			this.terminalElement = element;
-			this._stdin = $.noop;
-			this.cursorBlinkId = undefined;
-			this._colors = null;
 			this.stylesheetId = 'terminal-css';
+			this.cursorBlinkId = undefined;
+			this.term = lowLevelTerm;
+			this._stdin = $.noop;
+			this._colors = null;
 			this._lastScrollTop = null;
 			this._lastScrollSnap = null;
 			this._cachedNumberOfLines = null;
-			this._cachedCharacterWidth = null;
-			this._cachedCharacterHeight = null;
-			this.lastWrite = 0;
+			this._cachedCharWidth = null;
+			this._cachedCharHeight = null;
 			this._lastMessageType = INPUT;
 			this.themes = {
 				'Tango': [
@@ -507,97 +484,70 @@
 					'#ffffff', '#1a1a1a']	
 			};
 			
-			this.term.bell = function() {
-				document.getElementById('beep').play(3);
-			};
-			this.term.onreset = this.softReset;
-			
-			$(window).bind('keydown',function(e){TermJS.onKeydown(e);});
-			$(window).bind('keypress',function(e){TermJS.onKeypress(e);});
-			$(window).bind('resize',function(e){TermJS.onResize(e);});
-			$(window).bind('paste',function(e){TermJS.onPaste(e);});
-			
-			this.softReset();
-			this.enableScrollSnapping();
+			var debouncedScrollSnap = _.debounce(_.bind(this.scrollSnap, this),150);
+			$(window).bind('scroll',debouncedScrollSnap)
+			.bind('resize',debouncedScrollSnap)
+			.bind('keydown',_.bind(this.onKeydown,this))
+			.bind('keypress',_.bind(this.onKeypress,this))
+			.bind('paste',_.bind(this.onPaste,this))
+			.bind('resize',_.bind(this.scrollToBottom,this));
 			
 		} else {
-			return new Terminal(element);
+			return new Terminal();
 		}
 	}
 
-	
 	Terminal.prototype = {
+		
+		constructor: Terminal,
 		
 		setStdin: function(fn) {
 			this._stdin = fn;
 		},
 		
-		softReset: function() {
-			$(this.terminalElement).html('<div class="a0088"></div>');
-			this.invalidateCachedNumberOfLines();
-		},
-		
 		input: function(data){
-			TermJS._lastMessageType = INPUT;
-			TermJS._stdin(data);
+			this._lastMessageType = INPUT;
+			this._stdin(data);
 		},
 		
 		onKeydown: function(e) {
-			var shift = e.shiftKey;
-			var ctrl  = e.ctrlKey;
-			var meta  = e.altKey;
-			var mods   = shift || ctrl || meta;
-			var onlyCtrl  = ctrl  && !(shift || meta);
-			var ctrlShift = ctrl  && shift && !meta;
-			//console.log('keydown... ' + e.which, shift, ctrl, meta);
+			var mods   = e.shiftKey || e.ctrlKey || e.altKey;
+			var onlyCtrl  = e.ctrlKey  && !(e.shiftKey || e.altKey);
+			var ctrlShift = e.ctrlKey  && e.shiftKey && !e.altKey;
 			var SS3Seq = '\u001BO';
 			var CSISeq = '\u001B[';
 			var arrowSeq = this.term.flags.appCursorKeys ? SS3Seq : CSISeq;
 			if (!mods && (e.which === 8 || e.which === 9 || e.which === 27)) { //backspace tab esc
-				var ch = String.fromCharCode(e.which);
-				TermJS.input(ch);
+				this.input(String.fromCharCode(e.which));
 			} else if (!mods && e.which === 37) { // Left arrow
-				TermJS.input(arrowSeq+'D');
+				this.input(arrowSeq+'D');
 			} else if (!mods && e.which === 38) { // Up arrow
-				TermJS.input(arrowSeq+'A');
+				this.input(arrowSeq+'A');
 			} else if (!mods && e.which === 39) { // Right arrow
-				TermJS.input(arrowSeq+'C');
+				this.input(arrowSeq+'C');
 			} else if (!mods && e.which === 40) { // Down arrow
-				TermJS.input(arrowSeq+'B');
+				this.input(arrowSeq+'B');
 			} else if (onlyCtrl && e.which >= 65 && e.which <= 90) { // make Ctrl + A-Z work for lowercase
-				TermJS.input(String.fromCharCode(e.which - 64));
+				this.input(String.fromCharCode(e.which - 64));
 			} else if (ctrlShift && e.which === 84) { // Ctrl Shift t to open  new tab
 				window.open(location.href);
 			} else if (ctrlShift && e.which === 87) { // Ctrl Shift w to close tab
 				window.close();
 			} else {
-				//console.log('Unhandled keydown ' + e.which);
 				return;
 			}
 			// event was handled
-			e.preventDefault();
 			return false;
 		},
 		
 		onKeypress: function(e) {
-			//console.log('keypress... ' + e.which);
-			var ch = String.fromCharCode(e.which);
-			TermJS.input(ch);
-			e.preventDefault();
-			return false;
-		},
-		
-		onResize: function(e) {
-			//TODO: update tty size with stty on host
-			TermJS.scrollToBottom();
+			this.input(String.fromCharCode(e.which));
 			return false;
 		},
 		
 		onPaste: function(e){
-			e.stopPropagation();
-			e.preventDefault();
-			var data = e.originalEvent.clipboardData.getData('text/plain');
-			TermJS.input(data);
+			this.input(e.originalEvent.clipboardData.getData('text/plain'));
+			return false;
 		},
 
 		applyTheme: function(css) {
@@ -609,12 +559,8 @@
 		},
 
 		theme: function(newColors) {
-			if (newColors === undefined) {
-				return this._colors.slice(0);
-			} else {
-				this._colors = newColors.slice(0);
-				this.applyTheme(this.compileThemeToCss());
-			}
+			this._colors = newColors.slice(0);
+			this.applyTheme(this.compileThemeToCss());
 		},
 		
 		attributeToCss: function(attr, selected) {
@@ -723,35 +669,31 @@
 		},
 
 		renderEachDirtyLine: function(iterator) {
-			var linesToRender = [];
-			for (var key in this.term.dirtyLines) {
-				if(key >= 0){
-					linesToRender.push(parseInt(key,10));
-				}
-			}
-			linesToRender.sort(function(a,b){ return (a-b);});
-			for (var i = 0; i < linesToRender.length; i++) {
-				var lineNo = linesToRender[i];
+			var toRender = _(this.term.dirtyLines).chain().keys().map(function(a){return parseInt(a,10);}).value();
+			this._cachedNumberOfLines = null;
+			for (var i = 0; i < toRender.length; i++) {
+				var lineNo = toRender[i];
 				var missingLines = lineNo - this.numberOfLines() + 1;
 				if (missingLines > 1) {
 					console.error("Missing Lines: should this happen?");
 					var html = '';
 					for (var j = 0; j < missingLines; j++) {
 						html += '<div></div>';
+						this._cachedNumberOfLines++;
 					}
-					$(this.terminalElement).append(html);
+					$('#'+this.terminalId).append(html);
 				}
 				var $div = $("<div>");
 				if (missingLines == 1){
-					this.renderLineAsHtml(lineNo,$div);
-					$(this.terminalElement).append($div);
+					$('#'+this.terminalId).append($div);
+					this._cachedNumberOfLines++;
 				} else {					
-					$div = $(this.terminalElement).children().eq(lineNo);
+					$div = $('#'+this.terminalId).children().eq(lineNo);
 					$div.empty();
-					this.renderLineAsHtml(lineNo,$div);
 				}
-				this.invalidateCachedNumberOfLines();
+				this.renderLineAsHtml(lineNo,$div);
 			}
+			this._cachedNumberOfLines = null;
 			this.term.dirtyLines = {}; // Reset list of dirty lines after rendering
 		},
 		
@@ -763,13 +705,6 @@
 				$(window).scrollTop(snapPosition);
 				this._lastScrollSnap = snapPosition;
 			}
-			return false;
-		},
-
-		enableScrollSnapping: function() {
-			var debouncedScrollSnap = debounce(this.scrollSnap,150, 300, this);
-			$(window).scroll(function(){debouncedScrollSnap();});
-			$(window).resize(function(){debouncedScrollSnap();});
 		},
 
 		scrollToBottom: function() {
@@ -778,10 +713,7 @@
 			if(this._lastMessageType == OUTPUT && $(window).scrollTop() != this._lastScrollTop){
 				return;
 			}
-			var firstLine = this.numberOfLines() - this.term.rows;
-			if (firstLine < 0) {
-				firstLine = 0;
-			}
+			var firstLine = Math.max(this.numberOfLines() - this.term.rows, 0);
 			var position = firstLine * this.characterHeight();
 			if (position !== this._lastScrollTop) {
 				// Make room to scroll
@@ -789,7 +721,6 @@
 				$(window).scrollTop(position);
 				this._lastScrollTop = position;
 			}
-			return;
 		},
 
 		startCursorBlinking: function() {
@@ -813,33 +744,23 @@
 
 		numberOfLines: function() {
 			if (!this._cachedNumberOfLines) {
-				var b = $(this.terminalElement).find('> div');
-				this._cachedNumberOfLines = b.size();
-				if(this._cachedNumberOfLines == 2){
-					b = $(this.terminalElement).find('> div');					
-					window.a = b;
-				}
+				this._cachedNumberOfLines = $('#'+this.terminalId).find('div').size();
 			}
 			return this._cachedNumberOfLines;
 		},
 
-		invalidateCachedNumberOfLines: function() {
-			this._cachedNumberOfLines = null;
-			return false;
-		},
-
 		characterWidth: function() {
-			if (!this._cachedCharacterWidth) {
-				this._cachedCharacterWidth = $('#'+this.cursorId).innerWidth();
+			if (!this._cachedCharWidth) {
+				this._cachedCharWidth = $('#'+this.cursorId).innerWidth();
 			}
-			return this._cachedCharacterWidth;
+			return this._cachedCharWidth;
 		},
 
 		characterHeight: function() {
-			if (!this._cachedCharacterHeight) {
-				this._cachedCharacterHeight = $(this.terminalElement).find('div').innerHeight();
+			if (!this._cachedCharHeight) {
+				this._cachedCharHeight = $('#'+this.terminalId).find('div:first').innerHeight();
 			}
-			return this._cachedCharacterHeight;
+			return this._cachedCharHeight;
 		},
 
 		// TODO: use this for changing number of tty columns on window resize (stty -F ttys### columns x)
@@ -861,5 +782,5 @@
 		}
 	};
 	
-	window.TermJS = Terminal('#terminal');
+	window.TermJS = Terminal();
 })();
