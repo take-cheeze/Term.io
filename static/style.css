@@ -1,0 +1,31 @@
+body {
+	overflow-y: scroll;
+	padding: 0;
+	margin: 0;
+	background-color: #DEDEDE;
+}
+#term-bg{
+	z-index:-1;
+	position:absolute;
+	left:0px;
+	top:0px;
+	height: 336px;
+	width: 560px;
+	background-color:white;
+}
+#terminal{
+	width: 560px;
+	height: auto;		
+	background-color:white;
+}
+#terminal div{
+	white-space: pre;
+	overflow: hidden;
+	font-family: Menlo, monospace;
+	font-size:11px;
+	height: 14px;				
+}
+#beep {
+	position:absolute;
+	top:0px;
+}

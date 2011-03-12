@@ -3,25 +3,15 @@
 	<head>
 		<meta charset='utf-8'>
 		<title>JS-Term</title>
-		<link rel="shortcut icon" href="/favicon.ico">
-		<style>
-			 body {
-				overflow-y: scroll;
-				padding: 0;
-				margin: 0;
-			}
-			#terminal div{				
-				white-space: pre;
-				overflow: hidden;
-				font-family: Menlo, monospace;
-				font-size:11px;
-				height: 14px;
-			}
-			#beep {
-				position:absolute;
-				top:0px;
-			}
-		</style>
+		<link rel="stylesheet" href="style.css">
+	</head>
+	<body>
+		<div id='terminal' class='a0088'></div>
+		<div id='term-bg'></div>
+		<object id="beep" type="application/x-shockwave-flash" data="flashbeep-general.swf" width="1" height="1">
+			<param name="movie" value="flashbeep-general.swf" />
+			<param name="FlashVars" value="onLoad=isReady" />
+		</object>
 		<script src='jquery-1.5.1.min.js'></script>
 		<script src='underscore-min.js'></script>
 		<script src='socket.io.min.js'></script>
@@ -49,7 +39,6 @@
 					TermJS.setStdin($.noop);
 					TermJS.output('\r\n\n\u001B[0;1mCONNECTION CLOSED. \u001B[0m');
 				});
-		
 
 			/*
 				// Simple echo terminal
@@ -58,15 +47,7 @@
 					TermJS.output(data.replace('\r', '\r\n> ').replace('\b', '\b \b'));
 				});
 			*/
-
 			});
 		</script>
-	</head>
-	<body>
-		<div id='terminal' class='a0088'></div>
-		<object id="beep" type="application/x-shockwave-flash" data="flashbeep-general.swf" width="1" height="1">
-			<param name="movie" value="flashbeep-general.swf" />
-			<param name="FlashVars" value="onLoad=isReady" />
-		</object>
 	</body>
 </html>
