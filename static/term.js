@@ -118,6 +118,13 @@
 			this.dirtyLines[position.y] = true;
 		},
 		
+		insertChar: function(position, ach) {
+			this.ensureLineExists(position.y);
+			var line = this.grid[position.y]
+			this.grid[position.y] = line.slice(0, position.x).concat([ach],line.slice(position.x));
+			this.dirtyLines[position.y] = true;
+		},
+		
 		setCursor: function(newPosition) {
 			var newYScreenCoords = newPosition.y - this.windowFirstLine() + 1;
 			if(this.flags.specialScrollRegion && this.scrollRegion[1] < newYScreenCoords){			
@@ -152,7 +159,11 @@
 		},
 		
 		enterChar: function(ch) {
-			this.replaceChar(this.cursor, [this.cursor.attr, ch]);
+			if(this.flags.insertMode == false){
+				this.replaceChar(this.cursor, [this.cursor.attr, ch]);
+			} else {
+				this.insertChar(this.cursor, [this.cursor.attr, ch])
+			}
 			this.moveCursor({ x: 1 });
 		},
 		
@@ -288,9 +299,7 @@
 				arg = args[0];
 				if(arg === '4'){ //Insert mode ()
 					this.flags.insertMode = true;
-					console.warn('Insert Mode: not implemented');//bash: type "xy " then type over x or y
-				}
-				if(arg === '?1'){ //App Cursor Keys
+				} else if(arg === '?1'){ //App Cursor Keys
 					this.flags.appCursorKeys = true;
 				}
 				else if (arg === '?25') { //Cursor Visible
