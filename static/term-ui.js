@@ -239,8 +239,16 @@
 			}
 		},
 
-		renderEachDirtyLine: function(iterator) {
-			var toRender = _(this.term.dirtyLines).chain().keys().map(function(a){return parseInt(a,10);}).value();
+		render: function(iterator) {
+			var toRender;
+			if(this.term.redrawAll){
+				toRender = _.range(this.term.grid.length);
+				$('#'+this.terminalId).empty();
+				this.term.redrawAll = false;
+				console.log('redrawAll');
+			} else {
+				toRender = _(this.term.dirtyLines).chain().keys().map(function(a){return parseInt(a,10);}).value();
+			}
 			this._cachedNumberOfLines = null;
 			for (var i = 0; i < toRender.length; i++) {
 				var lineNo = toRender[i];
@@ -346,7 +354,7 @@
 
 		output: function(data) {			
 			this.term.write(data);
-			this.renderEachDirtyLine();
+			this.render();
 			this.scrollToBottom();
 			//this.startCursorBlinking();
 			this._lastMessageType = OUTPUT;

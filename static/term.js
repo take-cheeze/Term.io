@@ -13,6 +13,8 @@
 			this.rows = 24;
 			this.bell = function(){};
 			this.scrollRegion = [1,24];
+			this.redrawAll = false;
+			this.alternateScreenBufferStart = 0;
 			this.flags = {	appCursorKeys: false,
 							specialScrollRegion: false,
 							alternateScreenBuffer: false,
@@ -123,7 +125,7 @@
 		
 		insertChar: function(position, ach) {
 			this.ensureLineExists(position.y);
-			var line = this.grid[position.y]
+			var line = this.grid[position.y];
 			this.grid[position.y] = line.slice(0, position.x).concat([ach],line.slice(position.x));
 			this.dirtyLines[position.y] = true;
 		},
@@ -162,10 +164,10 @@
 		},
 		
 		enterChar: function(ch) {
-			if(this.flags.insertMode == false){
+			if(this.flags.insertMode === false){
 				this.replaceChar(this.cursor, [this.cursor.attr, ch]);
 			} else {
-				this.insertChar(this.cursor, [this.cursor.attr, ch])
+				this.insertChar(this.cursor, [this.cursor.attr, ch]);
 			}
 			this.moveCursor({ x: 1 });
 		},
@@ -318,7 +320,7 @@
 				} 
 				else if(arg === '?47'){	//Alternate screen buffer
 					this.flags.alternateScreenBuffer = true;
-					console.warn('Alternate screen buffer: not implemented');//vi, man, less
+					this.alternateScreenBufferStart = this.grid.length;
 				}
 				else {
 					console.warn('Unknown argument for CSI "h": ' + JSON.stringify(arg));
@@ -333,6 +335,8 @@
 					this.cursor.visible = false;
 				} else if (arg === '?47'){ //Normal Screen buffer
 					this.flags.alternateScreenBuffer = false;
+					this.grid = this.grid.slice(0,this.alternateScreenBufferStart);
+					this.redrawAll = true;
 				} else {
 					console.warn('Unknown argument for CSI "l": ' + JSON.stringify(arg));
 				}
