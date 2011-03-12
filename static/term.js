@@ -297,10 +297,11 @@
 					this.dirtyLines[this.cursor.y] = true;
 				}
 			} else if (command === 'c'){ //Send device attributes
+				// Silently fail to send attributes
+				// will implement if they need to be sent for some reason
 				if(args[0] === '>'){
 					//\u001B[1;4.8.0;0c  //vt100
 				}
-				console.warn('Send device attributes: not implemented ('+JSON.stringify(args)+')'); //used by vi
 			} else if (command === 'h') { //Set Mode
 				arg = args[0];
 				if(arg === '4'){ //Insert mode ()
