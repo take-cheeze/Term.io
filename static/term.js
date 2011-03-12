@@ -361,7 +361,7 @@
 			} else if (command === 'r'){ //Set scrolling region (vi)
 				var topRow = this.parseArg(args[0],0);
 				var botRow = this.parseArg(args[1],0);
-				if(topRow === 0 && botRow == this.rows){
+				if(topRow === 1 && botRow == this.rows){
 					this.flags.specialScrollRegion = false;
 				} else {
 					this.flags.specialScrollRegion = true;
