@@ -33,6 +33,17 @@
 		
 		constructor: Term,
 		
+		getScreenAsText: function() {
+			//return [this.windowFirstLine(),this.grid,(this.grid).length];
+			var screen = "";
+			var firstLine = this.windowFirstLine();
+			var numLines = this.windowFirstLine() + this.rows;
+			for(var i = firstLine; i < numLines; i++){
+				screen += this.renderLineAsText(i) + '\r\n';
+			}
+			return screen;
+		},
+		
 		renderLineAsText: function(lineNo) {
 			if (lineNo >= this.grid.length) {
 				return '';
@@ -44,7 +55,11 @@
 			}
 			var text = '';
 			for (var i = 0; i < lineLength; i++) {
-				text += line[i][1] | ' ';
+				if( typeof(line[i]) == 'undefined'){
+					text += ' ';
+				} else {
+					text += line[i][1];
+				}
 			}
 			return text;
 		},
@@ -430,5 +445,12 @@
 		}
 	};
 	
-	window.Term = Term;
+	var root = this;
+	
+	if (typeof module !== 'undefined' && module.exports) {
+	    module.exports = Term;
+	} else {
+	    root.Term = Term;
+	}
+	
 })();

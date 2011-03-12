@@ -1,5 +1,8 @@
 
 "use strict";
+require.paths.push(__dirname+"/static");
+var _ = require('underscore-min.js');
+var Term = require('term.js');
 var spawn = require('child_process').spawn;
 var fs = require('fs');
 var connect = require('connect');
@@ -39,25 +42,28 @@ io.on('connection', function(client){
 	client.on('message', function(data){
 		//The first message sent by the client must be the term they want
 		if(!client.initialized){
-			var path = data;
-			var term;
-			if(!ptys[path]){
-				term = spawn(command,commandArgs);
-				ptys[path] = ptys[path] || {
-					'term': term,
+			var id = data;
+			var termProcess;
+			if(!ptys[id]){
+				termProcess = spawn(command,commandArgs);
+				ptys[id] = ptys[id] || {
+					'termProcess': termProcess,
 					'connections':0,
-					'path':path
+					'id':id,
+					'term': new Term()
 				};
 			}
-			term = ptys[path].term;
-			ptys[path].connections++;
-			console.log('Connection open on ' + data + ' (' + ptys[path].connections + ' connected)');
-			var pty = ptys[path];
-			term.stdout.on('data', function(data) {
+			termProcess = ptys[id].termProcess;
+			ptys[id].connections++;
+			console.log('Connection open on ' + data + ' (' + ptys[id].connections + ' connected)');
+			var pty = ptys[id];
+			termProcess.stdout.on('data', function(data) {
 				client.send(data.toString());
+				pty.term.write(data);
+				//console.log(pty.term.getScreenAsText())
 			});
 			
-			term.on('exit', function() {
+			termProcess.on('exit', function() {
 				// Close connection
 			});
 			
@@ -65,15 +71,15 @@ io.on('connection', function(client){
 			client.pty = pty;
 		}
 		else{
-			client.pty.term.stdin.write(data);
+			client.pty.termProcess.stdin.write(data);
 		}
 	});
   client.on('disconnect', function(){
 		client.pty.connections--;
-		console.log('Connection closed on ' + client.pty.path + ' ('+client.pty.connections+' connected)');
+		console.log('Connection closed on ' + client.pty.id + ' ('+client.pty.connections+' connected)');
 		if(client.pty.connections === 0){
-			client.pty.term.kill();
-			delete ptys[client.pty.path];
+			client.pty.termProcess.kill();
+			delete ptys[client.pty.id];
 		}
   });
 });
