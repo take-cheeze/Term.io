@@ -7,7 +7,6 @@
 			this.dirtyLines = {};
 			this.cursor = { x: 0, y: 0, attr: 0x0088, visible: true };
 			this.savedCursor = {};
-			this._savedGrid = {};
 			this.buffer = '';
 			this.columns = 80;
 			this.rows = 24;
@@ -35,7 +34,6 @@
 		constructor: Term,
 		
 		getScreenAsText: function() {
-			//return [this.windowFirstLine(),this.grid,(this.grid).length];
 			var screen = "";
 			var firstLine = this.windowFirstLine();
 			var numLines = this.windowFirstLine() + this.rows;
@@ -232,7 +230,7 @@
 				this.savedCursor = {};
 			} else if(command === '=') {
 				this.flags.appKeypad = true;
-				console.warn("Application keypad on: not implemented");
+				console.warn("Application keypad: not implemented");
 			} else if(command === '>') {
 				this.flags.appKeypad = false;
 			} else {
@@ -310,7 +308,7 @@
 				}
 			} else if (command === 'h') { //Set Mode
 				arg = args[0];
-				if(arg === '4'){ //Insert mode ()
+				if(arg === '4'){ //Insert mode
 					this.flags.insertMode = true;
 				} else if(arg === '?1'){ //App Cursor Keys
 					this.flags.appCursorKeys = true;
@@ -457,9 +455,6 @@
 						console.error('Unhandled character ' + JSON.stringify(ch));
 					}
 				}
-			}
-			if (this.buffer.length > 0) {
-				console.warn('Unparsed buffer ' + JSON.stringify(this.buffer));
 			}
 		},
 		

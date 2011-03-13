@@ -16,14 +16,14 @@
 			this.stylesheetId = 'terminal-css';
 			this.cursorBlinkId = undefined;
 			this.term = lowLevelTerm;
-			this._stdin = $.noop;
-			this._colors = null;
-			this._lastScrollTop = null;
-			this._lastScrollSnap = null;
-			this._cachedNumberOfLines = null;
-			this._cachedCharWidth = null;
-			this._cachedCharHeight = null;
-			this._lastMessageType = INPUT;
+			this.stdin = $.noop;
+			this.colors = null;
+			this.lastScrollTop = null;
+			this.lastScrollSnap = null;
+			this.cachedNumberOfLines = null;
+			this.cachedCharWidth = null;
+			this.cachedCharHeight = null;
+			this.lastMessageType = INPUT;
 			this.themes = {
 				'Tango': [
 					'#000000', '#cc0000', '#4e9a06', '#c4a000', '#3465a4', '#75507b', '#06989a', '#d3d7cf',
@@ -73,12 +73,12 @@
 		constructor: Terminal,
 		
 		setStdin: function(fn) {
-			this._stdin = fn;
+			this.stdin = fn;
 		},
 		
 		input: function(data){
-			this._lastMessageType = INPUT;
-			this._stdin(data);
+			this.lastMessageType = INPUT;
+			this.stdin(data);
 		},
 		
 		onKeydown: function(e) {
@@ -130,7 +130,7 @@
 		},
 
 		theme: function(newColors) {
-			this._colors = newColors.slice(0);
+			this.colors = newColors.slice(0);
 			this.applyTheme(this.compileThemeToCss());
 		},
 		
@@ -150,8 +150,8 @@
 				fgIndex  = swap;
 			}
 			if (fgIndex < 8 && bright) { fgIndex |= 8; }
-			return 'color: ' + this._colors[fgIndex] + ';' +
-				(bgIndex !== 16 || inverse || selected ? ' background: ' + this._colors[bgIndex] + ';' : '') +
+			return 'color: ' + this.colors[fgIndex] + ';' +
+				(bgIndex !== 16 || inverse || selected ? ' background: ' + this.colors[bgIndex] + ';' : '') +
 				(bright ? ' font-weight: bold;' : '');
 		},
 
@@ -245,11 +245,10 @@
 				toRender = _.range(this.term.grid.length);
 				$('#'+this.terminalId).empty();
 				this.term.redrawAll = false;
-				console.log('redrawAll');
 			} else {
 				toRender = _(this.term.dirtyLines).chain().keys().map(function(a){return parseInt(a,10);}).value();
 			}
-			this._cachedNumberOfLines = null;
+			this.cachedNumberOfLines = null;
 			for (var i = 0; i < toRender.length; i++) {
 				var lineNo = toRender[i];
 				var missingLines = lineNo - this.numberOfLines() + 1;
@@ -258,21 +257,21 @@
 					var html = '';
 					for (var j = 0; j < missingLines; j++) {
 						html += '<div></div>';
-						this._cachedNumberOfLines++;
+						this.cachedNumberOfLines++;
 					}
 					$('#'+this.terminalId).append(html);
 				}
 				var $div = $("<div>");
 				if (missingLines == 1){
 					$('#'+this.terminalId).append($div);
-					this._cachedNumberOfLines++;
+					this.cachedNumberOfLines++;
 				} else {					
 					$div = $('#'+this.terminalId).children().eq(lineNo);
 					$div.empty();
 				}
 				this.renderLineAsHtml(lineNo,$div);
 			}
-			this._cachedNumberOfLines = null;
+			this.cachedNumberOfLines = null;
 			this.term.dirtyLines = {}; // Reset list of dirty lines after rendering
 		},
 		
@@ -280,25 +279,25 @@
 			var characterHeight = this.characterHeight();
 			var position = $(window).scrollTop();
 			var snapPosition = Math.floor(position / characterHeight) * characterHeight;
-			if (snapPosition !== this._lastScrollSnap) {
+			if (snapPosition !== this.lastScrollSnap) {
 				$(window).scrollTop(snapPosition);
-				this._lastScrollSnap = snapPosition;
+				this.lastScrollSnap = snapPosition;
 			}
 		},
 
 		scrollToBottom: function() {
 			// if there is output that is not a direct response to input and we are scrolling up,
 			// don't scroll down on output
-			if(this._lastMessageType == OUTPUT && $(window).scrollTop() != this._lastScrollTop){
+			if(this.lastMessageType == OUTPUT && $(window).scrollTop() != this.lastScrollTop){
 				return;
 			}
 			var firstLine = Math.max(this.numberOfLines() - this.term.rows, 0);
 			var position = firstLine * this.characterHeight();
-			if (position !== this._lastScrollTop) {
+			if (position !== this.lastScrollTop) {
 				// Make room to scroll
 				$('html').height(position + $(window).height());
 				$(window).scrollTop(position);
-				this._lastScrollTop = position;
+				this.lastScrollTop = position;
 			}
 		},
 
@@ -322,24 +321,24 @@
 		},
 
 		numberOfLines: function() {
-			if (!this._cachedNumberOfLines) {
-				this._cachedNumberOfLines = $('#'+this.terminalId).find('div').size();
+			if (!this.cachedNumberOfLines) {
+				this.cachedNumberOfLines = $('#'+this.terminalId).find('div').size();
 			}
-			return this._cachedNumberOfLines;
+			return this.cachedNumberOfLines;
 		},
 
 		characterWidth: function() {
-			if (!this._cachedCharWidth) {
-				this._cachedCharWidth = $('#'+this.cursorId).innerWidth();
+			if (!this.cachedCharWidth) {
+				this.cachedCharWidth = $('#'+this.cursorId).innerWidth();
 			}
-			return this._cachedCharWidth;
+			return this.cachedCharWidth;
 		},
 
 		characterHeight: function() {
-			if (!this._cachedCharHeight) {
-				this._cachedCharHeight = $('#'+this.terminalId).find('div:first').innerHeight();
+			if (!this.cachedCharHeight) {
+				this.cachedCharHeight = $('#'+this.terminalId).find('div:first').innerHeight();
 			}
-			return this._cachedCharHeight;
+			return this.cachedCharHeight;
 		},
 
 		// TODO: use this for changing number of tty columns on window resize (stty -F ttys### columns x)
@@ -357,7 +356,7 @@
 			this.render();
 			this.scrollToBottom();
 			//this.startCursorBlinking();
-			this._lastMessageType = OUTPUT;
+			this.lastMessageType = OUTPUT;
 		}
 	};
 	
