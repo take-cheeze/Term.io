@@ -360,6 +360,8 @@
 						this.cursor.attr |= 0x0400;
 					} else if (arg === 7) { //Image negative
 						this.cursor.attr |= 0x0200;
+					} else if (arg === 22) { //Normal (not bold or faint)
+						this.cursor.attr &= ~0x0100;
 					} else if (arg === 24) { //Underline off
 						this.cursor.attr &= ~0x0400;
 					} else if (arg === 27) { //Image negative off
