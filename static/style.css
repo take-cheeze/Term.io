@@ -19,6 +19,10 @@ body {
 	width: 560px;
 	height: auto;		
 	background-color:white;
+/*	
+	height: 336px;
+	width: 560px;
+	overflow: auto;*/
 }
 #terminal div{
 	white-space: pre;
