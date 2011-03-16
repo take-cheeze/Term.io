@@ -1,6 +1,10 @@
 (function() {
 	"use strict";
 	
+	if (typeof module !== 'undefined' && module.exports) {
+	    var _ = require('underscore-min.js');
+	}
+	
 	function Term(){
 		if ( this instanceof Term ) {
 			this.grid = [];
