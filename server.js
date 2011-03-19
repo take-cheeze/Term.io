@@ -1,4 +1,4 @@
-
+#!/usr/bin/env node
 "use strict";
 require.paths.push(__dirname+"/static");
 var _ = require('underscore-min.js');
