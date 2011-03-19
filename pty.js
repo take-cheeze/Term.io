@@ -9,23 +9,27 @@ var connect = require('connect');
 var io = require('socket.io');
 var noop = function(){};
 
-var port = parseInt(process.argv[2] || '8080', 10);
-var sslKeyPath = 'privatekey.pem';
-var sslCertPath = 'certificate.pem';
-var useSSL = false;
+try{
+	var config = JSON.parse(fs.readFileSync("config.json"));
+}
+catch(err){
+	console.log("copy config-sample.json to config.json and make changes to configure");
+	process.exit();
+}
+
 var command = 'python';
 var commandArgs = ['-c', 'import pty;pty.spawn(["bash","-l"])'];
 
 var server;
-if(useSSL){
+if(config.ssl.on){
 	server = connect({
-		key: fs.readFileSync(sslKeyPath),
-		cert: fs.readFileSync(sslCertPath)
+		key: fs.readFileSync(config.ssl.keyPath),
+		cert: fs.readFileSync(config.ssl.certPath)
 	});
 } else {
 	server = connect();
 }
-server.listen(port);
+server.listen(config.port);
 var io = io.listen(server,{log:noop});
 server.use(function(req, res, next){
     if (/^\/\w+$/.test(req.url)) {
@@ -84,7 +88,7 @@ io.on('connection', function(client){
   });
 });
 
-console.log('Ready to accept connections at http'+(useSSL?'s':'')+'://localhost:'+port);
+console.log('Ready to accept connections at http'+(config.ssl.on?'s':'')+'://localhost:'+config.port);
 process.on('uncaughtException', function(err) {
 	console.log(err.stack);
 });

@@ -8,3 +8,6 @@
 # SSL
 privatekey.pem
 certificate.pem
+
+# Config
+config.json
