@@ -19,8 +19,9 @@ catch(err){
 
 var command = 'python';
 var commandArgs = ['-c', 'import pty;pty.spawn(["bash","-l"])'];
-
+var termSessions = {};
 var server;
+
 if(config.ssl.on){
 	server = connect({
 		key: fs.readFileSync(config.ssl.keyPath),
@@ -29,6 +30,7 @@ if(config.ssl.on){
 } else {
 	server = connect();
 }
+
 server.listen(config.port);
 var io = io.listen(server,{log:noop});
 server.use(function(req, res, next){
@@ -40,55 +42,72 @@ server.use(function(req, res, next){
 server.use(connect['static'](__dirname + '/static'));
 
 
-var ptys = {};
+function TerminalSession(id){
+	if ( this instanceof TerminalSession ) {
+		this.connections = 0;
+		this.id = id;
+		this.termProcess = spawn(command,commandArgs);
+		this.term = new Term();
+	} else {
+		return new TerminalSession(id);
+	}
+}
+
+TerminalSession.prototype = {
+	
+	constructor: TerminalSession,
+	
+	newClient: function(client){
+		this.connections++;
+		
+		var self = this;
+		this.termProcess.stdout.on('data', function(data) {
+			client.send(data.toString());
+			self.term.write(data);
+			//console.log(self.term.getScreenAsText())
+		});
+		
+		client.termSession = this;
+		client.initialized = true;
+	},
+	
+	clientDisconnect: function(client){
+		this.connections--;
+		if(this.connections === 0){
+			process.nextTick(function () {
+				client.termSession.termProcess.kill();
+				delete termSessions[client.termSession.id];
+			});
+		}
+		client.initialized = false;
+	},
+	
+	handleMessage: function(client, msgText){
+		this.termProcess.stdin.write(msgText);
+	}
+};
+
+
 io.on('connection', function(client){
 	client.initialized = false;
 	client.on('message', function(data){
 		//The first message sent by the client must be the term they want
 		if(!client.initialized){
 			var id = data;
-			var termProcess;
-			if(!ptys[id]){
-				termProcess = spawn(command,commandArgs);
-				ptys[id] = ptys[id] || {
-					'termProcess': termProcess,
-					'connections':0,
-					'id':id,
-					'term': new Term()
-				};
+			if(!(id in termSessions)){
+				termSessions[id] = new TerminalSession(id);
 			}
-			termProcess = ptys[id].termProcess;
-			ptys[id].connections++;
-			console.log('Connection open on ' + data + ' (' + ptys[id].connections + ' connected)');
-			var pty = ptys[id];
-			termProcess.stdout.on('data', function(data) {
-				client.send(data.toString());
-				pty.term.write(data);
-				//console.log(pty.term.getScreenAsText())
-			});
-			
-			termProcess.on('exit', function() {
-				// Close connection
-			});
-			
-			client.initialized = true;
-			client.pty = pty;
+			termSessions[id].newClient(client);
+			console.log('Connection open on ' + data + ' (' + termSessions[id].connections + ' connected)');
 		}
 		else{
-			client.pty.termProcess.stdin.write(data);
+			client.termSession.handleMessage(client, data);
 		}
 	});
-  client.on('disconnect', function(){
-		client.pty.connections--;
-		console.log('Connection closed on ' + client.pty.id + ' ('+client.pty.connections+' connected)');
-		if(client.pty.connections === 0){
-			client.pty.termProcess.kill();
-			delete ptys[client.pty.id];
-		}
-  });
+	client.on('disconnect', function(){
+		client.termSession.clientDisconnect(client);
+		console.log('Connection closed on ' + client.termSession.id + ' ('+client.termSession.connections+' connected)');		
+	});
 });
 
 console.log('Ready to accept connections at http'+(config.ssl.on?'s':'')+'://localhost:'+config.port);
-process.on('uncaughtException', function(err) {
-	console.log(err.stack);
-});
