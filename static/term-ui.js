@@ -78,7 +78,10 @@
 		
 		input: function(data){
 			this.lastMessageType = INPUT;
-			this.stdin(data);
+			var msg = {};
+			msg.method = "input";
+			msg.data = data;
+			this.stdin(JSON.stringify(msg));
 		},
 		
 		onKeydown: function(e) {
@@ -357,6 +360,16 @@
 			this.scrollToBottom();
 			//this.startCursorBlinking();
 			this.lastMessageType = OUTPUT;
+		},
+		
+		handleMessage: function(msgText){
+			var msg = JSON.parse(msgText);
+			if( !"method" in msg || !"data" in msg){
+				return;
+			}
+			if(msg.method === "output"){
+				this.output(msg.data);
+			}
 		}
 	};
 	

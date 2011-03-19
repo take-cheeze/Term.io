@@ -35,7 +35,7 @@
 				});
 				
 				socket.on('message', function(data){
-				    TermJS.output(data);
+				    TermJS.handleMessage(data);
 				});
 				
 				socket.on('disconnect',function() {

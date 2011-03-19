@@ -3,6 +3,8 @@
 	
 	if (typeof module !== 'undefined' && module.exports) {
 	    var _ = require('underscore-min.js');
+	} else {
+		var _ = window._;
 	}
 	
 	function Term(){
@@ -416,7 +418,7 @@
 		},
 		
 		parseBuffer: function() {
-			//this.debugLog(this.buffer);
+			// this.debugLog(this.buffer);
 			var currentLength = 0;
 			var matches;
 			while (currentLength !== this.buffer.length && this.buffer.length > 0) {

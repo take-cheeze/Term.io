@@ -62,7 +62,11 @@ TerminalSession.prototype = {
 		
 		var self = this;
 		this.termProcess.stdout.on('data', function(data) {
-			client.send(data.toString());
+			var msg = {};
+			msg.method = "output";
+			msg.data = data.toString();
+			
+			client.send(JSON.stringify(msg));
 			self.term.write(data);
 			//console.log(self.term.getScreenAsText())
 		});
@@ -83,7 +87,15 @@ TerminalSession.prototype = {
 	},
 	
 	handleMessage: function(client, msgText){
-		this.termProcess.stdin.write(msgText);
+		var msg = JSON.parse(msgText);
+		
+		if( !"method" in msg || !"data" in msg){
+			return;
+		}
+		if(msg.method === "input"){
+			this.termProcess.stdin.write(msg.data);
+		}
+		
 	}
 };
 
