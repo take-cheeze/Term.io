@@ -1,12 +1,16 @@
 #!/usr/bin/env node
 "use strict";
+
+var child_process = require('child_process');
+var fs = require('fs');
+var os = require('os');
+
+var connect = require('connect');
+var io = require('socket.io');
+
 require.paths.push(__dirname+"/static");
 var _ = require('underscore-min.js');
 var Term = require('term.js');
-var spawn = require('child_process').spawn;
-var fs = require('fs');
-var connect = require('connect');
-var io = require('socket.io');
 var noop = function(){};
 
 try{
@@ -46,7 +50,7 @@ function TerminalSession(id){
 	if ( this instanceof TerminalSession ) {
 		this.connections = 0;
 		this.id = id;
-		this.termProcess = spawn(command,commandArgs);
+		this.termProcess = child_process.spawn(command,commandArgs);
 		this.term = new Term();
 	} else {
 		return new TerminalSession(id);
@@ -61,12 +65,9 @@ TerminalSession.prototype = {
 		this.connections++;
 		
 		var self = this;
+		
 		this.termProcess.stdout.on('data', function(data) {
-			var msg = {};
-			msg.method = "output";
-			msg.data = data.toString();
-			
-			client.send(JSON.stringify(msg));
+			self.sendMessage(client,"output",data.toString());
 			self.term.write(data);
 			//console.log(self.term.getScreenAsText())
 		});
@@ -86,16 +87,34 @@ TerminalSession.prototype = {
 		client.initialized = false;
 	},
 	
+	input: function(client, data){
+		this.termProcess.stdin.write(data);
+	},
+	
+	resize: function(client, data){
+		var self = this;
+		var filearg = (os.type() === 'Linux')?'F':'f';
+		child_process.exec("ps -e -o ppid= -o tty= | awk '$1 == "+this.termProcess.pid+" {print $2}'",function(error, tty){
+			child_process.exec("stty -"+filearg+" /dev/"+tty.trim()+" rows "+data.rows+" columns "+data.cols,function(error){
+				self.sendMessage(client,"ttyResizeDone",data);
+			});
+		});
+	},
+	
+	sendMessage: function(client, method, data){
+		var msg = {"method":method, "data":data};
+		client.send(JSON.stringify(msg));
+	},
+	
 	handleMessage: function(client, msgText){
 		var msg = JSON.parse(msgText);
 		
 		if( !"method" in msg || !"data" in msg){
 			return;
 		}
-		if(msg.method === "input"){
-			this.termProcess.stdin.write(msg.data);
-		}
-		
+		if(_(['input','resize']).contains(msg.method)){
+			this[msg.method](client, msg.data);
+		}		
 	}
 };
 

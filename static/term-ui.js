@@ -56,8 +56,10 @@
 			};
 			
 			var debouncedScrollSnap = _.debounce(_.bind(this.scrollSnap, this),150);
+			var throttledResize = _.throttle(_.bind(this.onWindowResize,this),200);
 			$(window).bind('scroll',debouncedScrollSnap)
 			.bind('resize',debouncedScrollSnap)
+			.bind('resize',throttledResize)
 			.bind('keydown',_.bind(this.onKeydown,this))
 			.bind('keypress',_.bind(this.onKeypress,this))
 			.bind('paste',_.bind(this.onPaste,this))
@@ -78,10 +80,7 @@
 		
 		input: function(data){
 			this.lastMessageType = INPUT;
-			var msg = {};
-			msg.method = "input";
-			msg.data = data;
-			this.stdin(JSON.stringify(msg));
+			this.sendMessage("input",data);
 		},
 		
 		onKeydown: function(e) {
@@ -122,6 +121,19 @@
 		onPaste: function(e){
 			this.input(e.originalEvent.clipboardData.getData('text/plain'));
 			return false;
+		},
+		
+		onWindowResize: function(){
+			this.sendMessage("resize",{"rows":this.getWindowRows(),"cols":this.getWindowColumns()});
+		},
+		
+		ttyResizeDone: function(data){
+			this.term.rows = data.rows;
+			this.term.columns = data.cols;
+			var termHeightPx = data.rows * this.characterHeight();
+			var termWidthPx = data.cols * this.characterWidth();
+			$(".loading-container, #term-bg").css({'height':termHeightPx,'width':termWidthPx});
+			$("#terminal").css({'width':termWidthPx});
 		},
 
 		applyTheme: function(css) {
@@ -344,12 +356,10 @@
 			return this.cachedCharHeight;
 		},
 
-		// TODO: use this for changing number of tty columns on window resize (stty -F ttys### columns x)
 		getWindowColumns: function() {
 			return Math.floor($(window).width() / this.characterWidth());
 		},
 
-		// TODO: use this for changing number of tty rows on window resize (stty -F ttys### rows x)
 		getWindowRows: function() {
 			return Math.floor($(window).height() / this.characterHeight());
 		},
@@ -362,15 +372,21 @@
 			this.lastMessageType = OUTPUT;
 		},
 		
+		sendMessage: function(method, data){
+			var msg = {"method":method, "data":data};
+			this.stdin(JSON.stringify(msg));
+		},
+		
 		handleMessage: function(msgText){
 			var msg = JSON.parse(msgText);
 			if( !"method" in msg || !"data" in msg){
 				return;
 			}
-			if(msg.method === "output"){
-				this.output(msg.data);
+			if(_(['output','ttyResizeDone']).contains(msg.method)){
+				this[msg.method](msg.data);
 			}
 		}
+	
 	};
 	
 	window.TermJS = Terminal();

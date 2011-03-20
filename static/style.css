@@ -9,8 +9,8 @@ body {
 	position:absolute;
 	left:0px;
 	top:0px;
-	height: 336px;
-	width: 560px;
+	height: 336px; /* 24 rows * 14 px */
+	width: 560px;  /* 80 cols *  7 px */
 	padding:0px;
 	margin:auto;
 	background-color:white;
