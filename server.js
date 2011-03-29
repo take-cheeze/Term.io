@@ -46,10 +46,13 @@ server.use(function(req, res, next){
 server.use(connect['static'](__dirname + '/static'));
 
 
-function TerminalSession(id){
+function TerminalSession(data){
 	if ( this instanceof TerminalSession ) {
 		this.connections = 0;
-		this.id = id;
+		this.id = data.id;
+		this.rows = data.rows;
+		this.cols = data.cols;
+		this.firstResizeDone = false;
 		this.termProcess = child_process.spawn(command,commandArgs);
 		this.term = new Term();
 	} else {
@@ -69,6 +72,9 @@ TerminalSession.prototype = {
 		this.termProcess.stdout.on('data', function(data) {
 			self.sendMessage(client,"output",data.toString());
 			self.term.write(data);
+			if(! self.firstResizeDone ){
+				self.resize(client,{'rows':self.rows,'cols':self.cols})
+			}
 			//console.log(self.term.getScreenAsText())
 		});
 		
@@ -106,9 +112,7 @@ TerminalSession.prototype = {
 		client.send(JSON.stringify(msg));
 	},
 	
-	handleMessage: function(client, msgText){
-		var msg = JSON.parse(msgText);
-		
+	handleMessage: function(client, msg){		
 		if( !"method" in msg || !"data" in msg){
 			return;
 		}
@@ -121,23 +125,26 @@ TerminalSession.prototype = {
 
 io.on('connection', function(client){
 	client.initialized = false;
-	client.on('message', function(data){
+	client.on('message', function(msgText){
+		var msg = JSON.parse(msgText);
 		//The first message sent by the client must be the term they want
-		if(!client.initialized){
-			var id = data;
+		if(!client.initialized || msg.method == "init"){
+			
+			var id = msg.data.id
 			if(!(id in termSessions)){
-				termSessions[id] = new TerminalSession(id);
+				termSessions[id] = new TerminalSession(msg.data);
 			}
 			termSessions[id].newClient(client);
-			console.log('Connection open on ' + data + ' (' + termSessions[id].connections + ' connected)');
+			// termSessions[id].resize(client,msg.data);
+			console.log(id + ': connection open (' + termSessions[id].connections + ' connected)');
 		}
 		else{
-			client.termSession.handleMessage(client, data);
+			client.termSession.handleMessage(client, msg);
 		}
 	});
 	client.on('disconnect', function(){
 		client.termSession.clientDisconnect(client);
-		console.log('Connection closed on ' + client.termSession.id + ' ('+client.termSession.connections+' connected)');		
+		console.log(client.termSession.id + ': connection closed ('+client.termSession.connections+' connected)');		
 	});
 });
 

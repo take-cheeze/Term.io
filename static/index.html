@@ -22,16 +22,11 @@
 		<script>
 			$(function() {
 				"use strict";
-				
-				TermJS.theme(TermJS.themes['Terminal.app']);
-
 				var socket = new io.Socket(location.hostname, {secure:location.protocol == "https:"});
 				socket.connect();
 
-				socket.on('connect', function(){					
-					socket.send(location.pathname);
-					TermJS.setStdin(function(data){socket.send(data);});
-					$('.loading-container').hide();
+				socket.on('connect', function(){
+					TermJS.onConnect(location.pathname,function(data){socket.send(data);})					
 				});
 				
 				socket.on('message', function(data){
@@ -39,9 +34,11 @@
 				});
 				
 				socket.on('disconnect',function() {
-					TermJS.setStdin($.noop);
-					$('.loading-container').show();
+					TermJS.onDisconnect();
 				});
+				
+				TermJS.theme(TermJS.themes['Terminal.app']);
+				
 
 			/*
 				// Simple echo terminal

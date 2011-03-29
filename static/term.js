@@ -14,7 +14,7 @@
 			this.cursor = { x: 0, y: 0, attr: 0x0088, visible: true };
 			this.savedCursor = {};
 			this.buffer = '';
-			this.columns = 80;
+			this.cols = 80;
 			this.rows = 24;
 			this.bell = function(){};
 			this.scrollRegion = [1,24];
@@ -151,7 +151,7 @@
 			}
 			
 			this.ensureLineExists(this.cursor.y);
-			if(this.cursor.x > this.columns){
+			if(this.cursor.x > this.cols){
 				this.cursor.x = 0;
 				this.cursor.y++;
 			}
@@ -277,7 +277,7 @@
 					lastLine  = firstLine + this.rows - 1;
 					this.setCursor({ y: firstLine });
 				}
-				var emptyLine = this.emptyLineArray(this.columns);
+				var emptyLine = this.emptyLineArray(this.cols);
 				for (var y = firstLine; y <= lastLine; y++) {
 					this.grid[y] = emptyLine.slice(0);
 					this.dirtyLines[y] = true;

@@ -83,6 +83,17 @@
 			this.sendMessage("input",data);
 		},
 		
+		onConnect: function(termId, stdin){			
+			TermJS.setStdin(stdin);
+			this.sendMessage("init",{"id":termId,"rows":this.getWindowRows(),"cols":this.getWindowCols()});
+			$('.loading-container').hide();
+		},
+		
+		onDisconnect: function(){
+			this.setStdin($.noop);
+			$('.loading-container').show();
+		},
+		
 		onKeydown: function(e) {
 			var mods   = e.shiftKey || e.ctrlKey || e.altKey;
 			var onlyCtrl  = e.ctrlKey  && !(e.shiftKey || e.altKey);
@@ -124,12 +135,13 @@
 		},
 		
 		onWindowResize: function(){
-			this.sendMessage("resize",{"rows":this.getWindowRows(),"cols":this.getWindowColumns()});
+			this.sendMessage("resize",{"rows":this.getWindowRows(),"cols":this.getWindowCols()});
 		},
 		
 		ttyResizeDone: function(data){
+			
 			this.term.rows = data.rows;
-			this.term.columns = data.cols;
+			this.term.cols = data.cols;
 			var termHeightPx = data.rows * this.characterHeight();
 			var termWidthPx = data.cols * this.characterWidth();
 			$(".loading-container, #term-bg").css({'height':termHeightPx,'width':termWidthPx});
@@ -343,6 +355,8 @@
 		},
 
 		characterWidth: function() {
+			return 7;
+			// TODO make work before terminal is initialized
 			if (!this.cachedCharWidth) {
 				this.cachedCharWidth = $('#'+this.cursorId).innerWidth();
 			}
@@ -350,13 +364,15 @@
 		},
 
 		characterHeight: function() {
+			return 14;
+			// TODO make work before terminal is initialized
 			if (!this.cachedCharHeight) {
 				this.cachedCharHeight = $('#'+this.terminalId).find('div:first').innerHeight();
 			}
 			return this.cachedCharHeight;
 		},
 
-		getWindowColumns: function() {
+		getWindowCols: function() {
 			return Math.floor($(window).width() / this.characterWidth());
 		},
 
@@ -388,6 +404,6 @@
 		}
 	
 	};
-	
+
 	window.TermJS = Terminal();
 })();
