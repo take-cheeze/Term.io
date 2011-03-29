@@ -339,7 +339,7 @@
 					this.cursor.visible = false;
 				} else if (arg === '?47'){ //Normal Screen buffer
 					this.flags.alternateScreenBuffer = false;
-					this.grid = this.grid.slice(0,this.alternateScreenBufferStart);
+					this.grid = this.grid.slice(0,this.alternateScreenBufferStart - 1);
 					this.redrawAll = true;
 				} else {
 					console.warn('Unknown argument for CSI "l": ' + JSON.stringify(arg));
