@@ -74,6 +74,7 @@ TerminalSession.prototype = {
 			self.term.write(data);
 			if(! self.firstResizeDone ){
 				self.resize(client,{'rows':self.rows,'cols':self.cols})
+				self.firstResizeDone = true;
 			}
 			//console.log(self.term.getScreenAsText())
 		});
