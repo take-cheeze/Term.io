@@ -1,11 +1,8 @@
 (function() {
 	"use strict";
 	
-	if (typeof module !== 'undefined' && module.exports) {
-	    var _ = require('underscore-min.js');
-	} else {
-		var _ = window._;
-	}
+	var commonjs = typeof module !== 'undefined' && module.exports;
+	var _ = commonjs ? require('underscore-min.js') : window._;
 	
 	function Term(){
 		if ( this instanceof Term ) {
@@ -340,7 +337,7 @@
 				} else if (arg === '?47'){ //Normal Screen buffer
 					this.flags.alternateScreenBuffer = false;
 					this.grid = this.grid.slice(0,this.alternateScreenBufferStart);
-					this.grid[this.alternateScreenBufferStart - 1] = []
+					this.grid[this.alternateScreenBufferStart - 1] = [];
 					this.redrawAll = true;
 				} else {
 					console.warn('Unknown argument for CSI "l": ' + JSON.stringify(arg));
@@ -405,7 +402,7 @@
 		
 		escapeCodeOSC: function(command) {
 			if (command.substr(0, 2) === '0;') {
-				document.title = command.substr(2);
+				// document.title = command.substr(2);
 			} else {
 				console.warn('Unhandled escape code OSC ' + JSON.stringify(command));
 			}
@@ -464,6 +461,15 @@
 						console.error('Unhandled character ' + JSON.stringify(ch));
 					}
 				}
+			}
+		},
+		
+		resize: function(rows,cols){
+			var oldRows = this.rows;
+			this.rows = rows;
+			this.cols = cols;
+			if(_(this.scrollRegion).isEqual([1,oldRows])){
+				this.scrollRegion = [1,this.rows];
 			}
 		},
 		

@@ -73,9 +73,10 @@ TerminalSession.prototype = {
 			self.sendMessage(client,"output",data.toString());
 			self.term.write(data);
 			if(! self.firstResizeDone ){
-				self.resize(client,{'rows':self.rows,'cols':self.cols})
+				self.resize(client,{'rows':self.rows,'cols':self.cols});
 				self.firstResizeDone = true;
 			}
+			//process.stdout.write(data.toString());
 			//console.log(self.term.getScreenAsText())
 		});
 		
@@ -104,6 +105,7 @@ TerminalSession.prototype = {
 		child_process.exec("ps -e -o ppid= -o tty= | awk '$1 == "+this.termProcess.pid+" {print $2}'",function(error, tty){
 			child_process.exec("stty -"+filearg+" /dev/"+tty.trim()+" rows "+data.rows+" columns "+data.cols,function(error){
 				self.sendMessage(client,"ttyResizeDone",data);
+				self.term.resize(data.rows,data.cols);
 			});
 		});
 	},
@@ -131,13 +133,13 @@ io.on('connection', function(client){
 		//The first message sent by the client must be the term they want
 		if(!client.initialized || msg.method == "init"){
 			
-			var id = msg.data.id
+			var id = msg.data.id;
 			if(!(id in termSessions)){
 				termSessions[id] = new TerminalSession(msg.data);
 			}
 			termSessions[id].newClient(client);
 			// termSessions[id].resize(client,msg.data);
-			console.log(id + ': connection open (' + termSessions[id].connections + ' connected)');
+			// console.log(id + ': connection open (' + termSessions[id].connections + ' connected)');
 		}
 		else{
 			client.termSession.handleMessage(client, msg);
@@ -145,7 +147,7 @@ io.on('connection', function(client){
 	});
 	client.on('disconnect', function(){
 		client.termSession.clientDisconnect(client);
-		console.log(client.termSession.id + ': connection closed ('+client.termSession.connections+' connected)');		
+		// console.log(client.termSession.id + ': connection closed ('+client.termSession.connections+' connected)');		
 	});
 });
 

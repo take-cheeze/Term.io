@@ -139,13 +139,12 @@
 		},
 		
 		ttyResizeDone: function(data){
-			
-			this.term.rows = data.rows;
-			this.term.cols = data.cols;
+			this.term.resize(data.rows,data.cols);
 			var termHeightPx = data.rows * this.characterHeight();
 			var termWidthPx = data.cols * this.characterWidth();
 			$(".loading-container, #term-bg").css({'height':termHeightPx,'width':termWidthPx});
 			$("#terminal").css({'width':termWidthPx});
+			this.lastScrollTop = $(window).scrollTop();
 		},
 
 		applyTheme: function(css) {
@@ -313,18 +312,20 @@
 		},
 
 		scrollToBottom: function() {
+			var firstLine = Math.max(this.numberOfLines() - this.term.rows, 0);
+			var termTop = firstLine * this.characterHeight();
+			
 			// if there is output that is not a direct response to input and we are scrolling up,
 			// don't scroll down on output
-			if(this.lastMessageType == OUTPUT && $(window).scrollTop() != this.lastScrollTop){
-				return;
-			}
-			var firstLine = Math.max(this.numberOfLines() - this.term.rows, 0);
-			var position = firstLine * this.characterHeight();
-			if (position !== this.lastScrollTop) {
+			// if(this.lastMessageType == OUTPUT && $(window).scrollTop() > this.lastScrollTop){
+			//	return;
+			// }
+
+			if (termTop !== this.lastScrollTop) {
 				// Make room to scroll
-				$('html').height(position + $(window).height());
-				$(window).scrollTop(position);
-				this.lastScrollTop = position;
+				$('html').height(termTop + $(window).height());
+				$(window).scrollTop(termTop);
+				this.lastScrollTop = termTop;
 			}
 		},
 
@@ -356,20 +357,20 @@
 
 		characterWidth: function() {
 			return 7;
-			// TODO make work before terminal is initialized
-			if (!this.cachedCharWidth) {
-				this.cachedCharWidth = $('#'+this.cursorId).innerWidth();
-			}
-			return this.cachedCharWidth;
+			// // TODO make work before terminal is initialized
+			// if (!this.cachedCharWidth) {
+			//	this.cachedCharWidth = $('#'+this.cursorId).innerWidth();
+			// }
+			// return this.cachedCharWidth;
 		},
 
 		characterHeight: function() {
 			return 14;
-			// TODO make work before terminal is initialized
-			if (!this.cachedCharHeight) {
-				this.cachedCharHeight = $('#'+this.terminalId).find('div:first').innerHeight();
-			}
-			return this.cachedCharHeight;
+			// // TODO make work before terminal is initialized
+			// if (!this.cachedCharHeight) {
+			//	this.cachedCharHeight = $('#'+this.terminalId).find('div:first').innerHeight();
+			// }
+			// return this.cachedCharHeight;
 		},
 
 		getWindowCols: function() {
