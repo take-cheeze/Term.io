@@ -11,7 +11,16 @@
 				document.getElementById('beep').play(3);
 			};
 			
-			this.terminalId = 'terminal';
+			this.$termdiv = $('#terminal');
+			
+			// window or div
+			this.scrollingType = 'window';
+			if(this.scrollingType === 'div'){
+				this.$scrollingElt = this.$termdiv;
+			} else {
+				this.$scrollingElt = $(window);
+			}
+
 			this.cursorId = 'cursor';
 			this.stylesheetId = 'terminal-css';
 			this.cursorBlinkId = undefined;
@@ -57,13 +66,13 @@
 			
 			var debouncedScrollSnap = _.debounce(_.bind(this.scrollSnap, this),150);
 			var throttledResize = _.throttle(_.bind(this.onWindowResize,this),200);
-			$(window).bind('scroll',debouncedScrollSnap)
-			.bind('resize',debouncedScrollSnap)
-			.bind('resize',throttledResize)
-			.bind('keydown',_.bind(this.onKeydown,this))
-			.bind('keypress',_.bind(this.onKeypress,this))
-			.bind('paste',_.bind(this.onPaste,this))
-			.bind('resize',_.bind(this.scrollToBottom,this));
+			$(window).bind('scroll',debouncedScrollSnap);
+			$(window).bind('resize',debouncedScrollSnap);
+			$(window).bind('resize',throttledResize);
+			$(window).bind('keydown',_.bind(this.onKeydown,this));
+			$(window).bind('keypress',_.bind(this.onKeypress,this));
+			$(window).bind('paste',_.bind(this.onPaste,this));
+			$(window).bind('resize',_.bind(this.scrollToBottom,this));
 			
 		} else {
 			return new Terminal();
@@ -269,7 +278,7 @@
 			var toRender;
 			if(this.term.redrawAll){
 				toRender = _.range(this.term.grid.length);
-				$('#'+this.terminalId).empty();
+				this.$termdiv.empty();
 				this.term.redrawAll = false;
 			} else {
 				toRender = _(this.term.dirtyLines).chain().keys().map(function(a){return parseInt(a,10);}).value();
@@ -285,14 +294,14 @@
 						html += '<div></div>';
 						this.cachedNumberOfLines++;
 					}
-					$('#'+this.terminalId).append(html);
+					this.$termdiv.append(html);
 				}
 				var $div = $("<div>");
 				if (missingLines == 1){
-					$('#'+this.terminalId).append($div);
+					this.$termdiv.append($div);
 					this.cachedNumberOfLines++;
 				} else {					
-					$div = $('#'+this.terminalId).children().eq(lineNo);
+					$div = this.$termdiv.children().eq(lineNo);
 					$div.empty();
 				}
 				this.renderLineAsHtml(lineNo,$div);
@@ -317,14 +326,16 @@
 			
 			// if there is output that is not a direct response to input and we are scrolling up,
 			// don't scroll down on output
-			// if(this.lastMessageType == OUTPUT && $(window).scrollTop() > this.lastScrollTop){
+			// if(this.lastMessageType == OUTPUT && this.$scrollingElt.scrollTop() > this.lastScrollTop){
 			//	return;
 			// }
 
 			if (termTop !== this.lastScrollTop) {
 				// Make room to scroll
-				$('html').height(termTop + $(window).height());
-				$(window).scrollTop(termTop);
+				if(this.scrollingType == "window"){
+					$('html').height(termTop + $(window).height());
+				}
+				this.$scrollingElt.scrollTop(termTop);
 				this.lastScrollTop = termTop;
 			}
 		},
@@ -350,7 +361,7 @@
 
 		numberOfLines: function() {
 			if (!this.cachedNumberOfLines) {
-				this.cachedNumberOfLines = $('#'+this.terminalId).find('div').size();
+				this.cachedNumberOfLines = this.$termdiv.find('div').size();
 			}
 			return this.cachedNumberOfLines;
 		},
@@ -368,7 +379,7 @@
 			return 14;
 			// // TODO make work before terminal is initialized
 			// if (!this.cachedCharHeight) {
-			//	this.cachedCharHeight = $('#'+this.terminalId).find('div:first').innerHeight();
+			//	this.cachedCharHeight = $('#'+this.g).find('div:first').innerHeight();
 			// }
 			// return this.cachedCharHeight;
 		},

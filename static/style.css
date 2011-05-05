@@ -1,9 +1,8 @@
+/* css specific to window scrolling: */
 body {
 	overflow-y: scroll;
-	padding: 0;
-	margin: 0;
-	background-color: #DEDEDE;
 }
+
 #term-bg{
 	z-index:-1;
 	position:absolute;
@@ -15,14 +14,29 @@ body {
 	margin:auto;
 	background-color:white;
 }
+
+#terminal{
+	height: auto;
+}
+/* css specific to div scrolling: */
+/*
+#terminal{
+	overflow-y: scroll;		
+	padding-right: 15px;	
+	height: 336px;
+}  
+*/
+/* general css: */
+
+body {
+	padding: 0;
+	margin: 0;
+	background-color: #DEDEDE;
+}
+
 #terminal{
 	width: 560px;
-	height: auto;		
 	background-color:white;
-/*	
-	height: 336px;
-	width: 560px;
-	overflow: auto;*/
 }
 #terminal div{
 	white-space: pre;
