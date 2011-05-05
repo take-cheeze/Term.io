@@ -17,6 +17,7 @@
 			this.scrollRegion = [1,24];
 			this.redrawAll = false;
 			this.alternateScreenBufferStart = 0;
+			this.title = "";
 			this.flags = {	appCursorKeys: false,
 							specialScrollRegion: false,
 							alternateScreenBuffer: false,
@@ -420,7 +421,8 @@
 		
 		escapeCodeOSC: function(command) {
 			if (command.substr(0, 2) === '0;') {
-				// document.title = command.substr(2);
+				// TODO: update document.title in ui
+				this.title = command.substr(2);
 			} else {
 				console.warn('Unhandled escape code OSC ' + JSON.stringify(command));
 			}
