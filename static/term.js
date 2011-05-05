@@ -75,7 +75,6 @@
 		
 		ensureColumnExists: function(position) {
 			var line = this.grid[position.y];
-			this.dirtyLines[position.y] = true;
 			while (line.length < position.x) {
 				line.push([this.cursor.attr, ' ']);
 			}
@@ -97,7 +96,7 @@
 		},
 		
 		emptyLineArray: function(maxSize) {
-			maxSize = maxSize || 80;
+			maxSize = maxSize || this.cols;
 			
 			var array = [[this.cursor.attr, ' ']];
 			for (var i = 0; i < 9; i++) {
@@ -212,6 +211,29 @@
 			}
 		},
 		
+		saveCursor: function() {
+			this.savedCursor = _.clone(this.cursor);
+			this.savedCursor.y = this.toScreenCoords(this.savedCursor.y);
+		},
+		
+		restoreCursor: function() {
+			this.savedCursor.y = this.toLineCoords(this.savedCursor.y);
+			this.cursor = this.savedCursor;
+			this.savedCursor = {};
+		},
+		
+		alternateScreenBuffer: function() {
+			this.flags.alternateScreenBuffer = true;
+			this.alternateScreenBufferStart = this.grid.length;
+		},
+		
+		normalScreenBuffer: function() {
+			this.flags.alternateScreenBuffer = false;
+			this.grid = this.grid.slice(0,this.alternateScreenBufferStart);
+			this.grid[this.alternateScreenBufferStart - 1] = [];
+			this.redrawAll = true;
+		},
+		
 		parseArg: function(arg, defaultVal){
 			return parseInt(arg || defaultVal, 10) || defaultVal;
 		},
@@ -224,13 +246,10 @@
 				this.reset();
 			} else if (command === '(B') {
 				this.cursor.attr &= ~0x300; // <-- HACK SO `top` WORKS PROPERLY
-			} else if (command === '7') {
-				this.savedCursor = _.clone(this.cursor);
-				this.savedCursor.y = this.toScreenCoords(this.savedCursor.y);
-			} else if (command === '8') {
-				this.savedCursor.y = this.toLineCoords(this.savedCursor.y);
-				this.cursor = this.savedCursor;
-				this.savedCursor = {};
+			} else if (command === '7') {	// Save Cursor
+				this.saveCursor();
+			} else if (command === '8') {	// Restore Cursor
+				this.restoreCursor();
 			} else if(command === '=') {
 				this.flags.appKeypad = true;
 				console.warn("Application keypad: not implemented");
@@ -315,15 +334,14 @@
 					this.flags.insertMode = true;
 				} else if(arg === '?1'){ //App Cursor Keys
 					this.flags.appCursorKeys = true;
-				}
-				else if (arg === '?25') { //Cursor Visible
+				} else if (arg === '?25') { //Cursor Visible
 					this.cursor.visible = true;
-				} 
-				else if(arg === '?47'){	//Alternate screen buffer
-					this.flags.alternateScreenBuffer = true;
-					this.alternateScreenBufferStart = this.grid.length;
-				}
-				else {
+				} else if(arg === '?47'){	//Alternate screen buffer
+					this.alternateScreenBuffer();
+				} else if(arg === '?1049'){ //Alternate screen buffer and save cursor
+					this.alternateScreenBuffer();
+					this.saveCursor();
+				} else {
 					console.warn('Unknown argument for CSI "h": ' + JSON.stringify(arg));
 				}
 			} else if (command === 'l') { //Reset Mode
@@ -335,10 +353,10 @@
 				} else if (arg === '?25') { //Cursor invisible
 					this.cursor.visible = false;
 				} else if (arg === '?47'){ //Normal Screen buffer
-					this.flags.alternateScreenBuffer = false;
-					this.grid = this.grid.slice(0,this.alternateScreenBufferStart);
-					this.grid[this.alternateScreenBufferStart - 1] = [];
-					this.redrawAll = true;
+					this.normalScreenBuffer();
+				} else if (arg === '?1049'){ // Normal Screen buffer and restore cursor
+					this.normalScreenBuffer();
+					this.restoreCursor();
 				} else {
 					console.warn('Unknown argument for CSI "l": ' + JSON.stringify(arg));
 				}
@@ -416,7 +434,7 @@
 		},
 		
 		parseBuffer: function() {
-			// this.debugLog(this.buffer);
+			//this.debugLog(this.buffer);
 			var currentLength = 0;
 			var matches;
 			while (currentLength !== this.buffer.length && this.buffer.length > 0) {
