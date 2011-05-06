@@ -406,8 +406,12 @@
 					}
 				}
 			} else if (command === 'r'){ //Set scrolling region (vi)
-				var topRow = this.parseArg(args[0],0);
-				var botRow = this.parseArg(args[1],0);
+				var topRow = 1;
+				var botRow = this.rows;
+				if(args.length !== 0){
+					topRow = this.parseArg(args[0],0);
+					botRow = this.parseArg(args[1],0);
+				}
 				if(topRow === 1 && botRow == this.rows){
 					this.flags.specialScrollRegion = false;
 				} else {
