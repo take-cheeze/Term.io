@@ -151,4 +151,8 @@ io.on('connection', function(client){
 	});
 });
 
+process.on('uncaughtException', function (err) {
+  console.log('Caught exception: ' + err);
+});
+
 console.log('Ready to accept connections at http'+(config.ssl.on?'s':'')+'://localhost:'+config.port);
