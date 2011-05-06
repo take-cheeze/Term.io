@@ -3,7 +3,7 @@ body {
 	overflow-y: scroll;
 }
 
-#term-bg{
+.term-bg{
 	z-index:-1;
 	position:absolute;
 	left:0px;
@@ -15,12 +15,12 @@ body {
 	background-color:white;
 }
 
-#terminal{
+.terminal{
 	height: auto;
 }
 /* css specific to div scrolling: */
 /*
-#terminal{
+.terminal{
 	overflow-y: scroll;		
 	padding-right: 15px;	
 	height: 336px;
@@ -34,11 +34,11 @@ body {
 	background-color: #DEDEDE;
 }
 
-#terminal{
+.terminal {
 	width: 560px;
 	background-color:white;
 }
-#terminal div{
+.terminal div{
 	white-space: pre;
 	overflow: hidden;
 	font-family: Menlo, monospace;

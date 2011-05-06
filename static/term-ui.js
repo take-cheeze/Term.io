@@ -22,6 +22,7 @@
 			}
 
 			this.cursorId = 'cursor';
+			this.cursorAttr = 0;
 			this.stylesheetId = 'terminal-css';
 			this.cursorBlinkId = undefined;
 			this.term = lowLevelTerm;
@@ -94,7 +95,7 @@
 		
 		onConnect: function(termId, stdin){			
 			TermJS.setStdin(stdin);
-			this.sendMessage("init",{"id":termId,"rows":this.getWindowRows(),"cols":this.getWindowCols()});
+			this.sendMessage("init",{"id":termId,"rows":this.getMaxRows(),"cols":this.getMaxCols()});
 			$('.loading-container').hide();
 		},
 		
@@ -144,14 +145,14 @@
 		},
 		
 		onWindowResize: function(){
-			this.sendMessage("resize",{"rows":this.getWindowRows(),"cols":this.getWindowCols()});
+			this.sendMessage("resize",{"rows":this.getMaxRows(),"cols":this.getMaxCols()});
 		},
 		
 		ttyResizeDone: function(data){
 			this.term.resize(data.rows,data.cols);
 			var termHeightPx = data.rows * this.characterHeight();
 			var termWidthPx = data.cols * this.characterWidth();
-			$(".loading-container, #term-bg").css({'height':termHeightPx,'width':termWidthPx});
+			$(".loading-container, .term-bg").css({'height':termHeightPx,'width':termWidthPx});
 			$("#terminal").css({'width':termWidthPx});
 			this.lastScrollTop = $(window).scrollTop();
 		},
@@ -209,20 +210,10 @@
 			return 'a' + ('0000' + (attr & 0x3FF).toString(16)).substr(-4).toUpperCase();
 		},
 
-		attrFromClass: function(className) {
-			if (className) {
-				return parseInt(className.substr(1), 16);
-			} else {
-				return 0x0088;
-			}
-		},
-
 		renderLineAsHtml: function(lineNo, $div) {
 			var cursor = this.term.cursor;
 			var grid = this.term.grid;
-			if (lineNo >= grid.length) {
-				return '';
-			}
+			if (lineNo >= grid.length) return;
 			var line = grid[lineNo];
 			var lineLength = line.length;
 			if (lineNo === cursor.y && cursor.x + 1 > lineLength) {
@@ -239,30 +230,28 @@
 				var isCursor = (lineNo === cursor.y && i === cursor.x && cursor.visible);
 				if (isCursor) {
 					a ^= 0x200;
+					this.cursorAttr = a;
 				}
 				var cursorId = (isCursor ? ' id="' + this.cursorId + '"' : '');
 				var style = (a & 0x400 ? ' style="text-decoration: underline;"' : '');
+				
 
-				if(a == lastStyle){
-					text += ch;
-				} else {
-					if(spanOpen){
-						spanOpen = false;
-						$div.find('span:last').text(text);
-						text = '';
-					}
-					if(a == 0x88 && !isCursor){
-						text += ch;
-					} else {
-						if(text.length > 0){
+				if(a != lastStyle){
+					if(text.length > 0){
+						if(spanOpen){
+							$div.find('span:last').text(text);
+						} else {
 							$div.append(document.createTextNode(text));
-							text = "";
 						}
+					}
+					spanOpen = false;
+					text = '';
+					if(a != 0x88){
 						$div.append('<span class="' + this.attrToClass(a) + '"' + cursorId + style + '>');
-						text += ch;
 						spanOpen = true;
 					}
 				}
+				text += ch;
 				lastStyle = a;	
 			}
 			if(text.length > 0){
@@ -343,8 +332,8 @@
 		startCursorBlinking: function() {
 			this.stopCursorBlinking();
 			var cursor = $('#' + this.cursorId);
-			var cursorClass = cursor.attr('class');
-			var invClass = this.attrToClass(this.attrFromClass(cursorClass) ^ 0x200);
+			var cursorClass = this.attrToClass( this.cursorAttr);
+			var invClass = this.attrToClass(this.cursorAttr ^ 0x200);
 			this.cursorBlinkId = window.setInterval(function() {
 				if(cursor.attr('class') == cursorClass){
 					cursor.removeClass().addClass(invClass);
@@ -356,7 +345,6 @@
 
 		stopCursorBlinking: function() {
 			window.clearInterval(this.cursorBlinkId);
-			this.cursorBlinkId = undefined;
 		},
 
 		numberOfLines: function() {
@@ -384,11 +372,11 @@
 			// return this.cachedCharHeight;
 		},
 
-		getWindowCols: function() {
+		getMaxCols: function() {
 			return Math.floor($(window).width() / this.characterWidth());
 		},
 
-		getWindowRows: function() {
+		getMaxRows: function() {
 			return Math.floor($(window).height() / this.characterHeight());
 		},
 
