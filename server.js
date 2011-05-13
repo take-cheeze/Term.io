@@ -38,6 +38,14 @@ if(config.ssl.on){
 server.listen(config.port);
 var io = io.listen(server,{log:noop});
 server.use(function(req, res, next){
+	if (req.url === '/') {
+		res.writeHead(302, { 'Location': '/'+(_.size(termSessions) + 1) });
+		res.end();
+    } else {
+		next();
+	}
+})
+server.use(function(req, res, next){
     if (/^\/\w+$/.test(req.url)) {
         req.url = '/';
     }
@@ -48,13 +56,27 @@ server.use(connect['static'](__dirname + '/static'));
 
 function TerminalSession(data){
 	if ( this instanceof TerminalSession ) {
-		this.connections = 0;
+		this.clients = [];
 		this.id = data.id;
 		this.rows = data.rows;
 		this.cols = data.cols;
 		this.firstResizeDone = false;
 		this.termProcess = child_process.spawn(command,commandArgs);
 		this.term = new Term();
+		
+		var self = this;
+		this.termProcess.stdout.on('data', function(data) {
+			self.sendMessage("broadcast","output",data.toString());
+			self.term.write(data);
+			if(! self.firstResizeDone ){
+				self.resize("broadcast",{'rows':self.rows,'cols':self.cols});
+				self.firstResizeDone = true;
+			}
+			
+			process.stdout.write(data.toString());
+			//console.log(self.term.getScreenAsText())
+		});
+		
 	} else {
 		return new TerminalSession(id);
 	}
@@ -65,34 +87,19 @@ TerminalSession.prototype = {
 	constructor: TerminalSession,
 	
 	newClient: function(client){
-		this.connections++;
-		
-		var self = this;
-		
-		this.termProcess.stdout.on('data', function(data) {
-			self.sendMessage(client,"output",data.toString());
-			self.term.write(data);
-			if(! self.firstResizeDone ){
-				self.resize(client,{'rows':self.rows,'cols':self.cols});
-				self.firstResizeDone = true;
-			}
-			//process.stdout.write(data.toString());
-			//console.log(self.term.getScreenAsText())
-		});
-		
+		this.clients.push(client);
 		client.termSession = this;
-		client.initialized = true;
+		//send current term state with size
 	},
 	
 	clientDisconnect: function(client){
-		this.connections--;
-		if(this.connections === 0){
-			process.nextTick(function () {
+		this.clients = _(this.clients).without(client);
+		if(this.clients.length === 0){
+			process.nextTick(function() {
 				client.termSession.termProcess.kill();
 				delete termSessions[client.termSession.id];
 			});
 		}
-		client.initialized = false;
 	},
 	
 	input: function(client, data){
@@ -100,10 +107,14 @@ TerminalSession.prototype = {
 	},
 	
 	resize: function(client, data){
+		//return
 		var self = this;
 		var filearg = (os.type() === 'Linux')?'F':'f';
-		child_process.exec("ps -e -o ppid= -o tty= | awk '$1 == "+this.termProcess.pid+" {print $2}'",function(error, tty){
-			child_process.exec("stty -"+filearg+" /dev/"+tty.trim()+" rows "+data.rows+" columns "+data.cols,function(error){
+		var getTtyCmd = "ps -e -o ppid= -o tty= | awk '$1 == "+this.termProcess.pid+" {print $2}'";
+		var sttyCmd = "stty -"+filearg+" /dev/";
+		var ttyOptions = " rows "+data.rows+" columns "+data.cols;
+		child_process.exec(getTtyCmd,function(error, tty){
+			child_process.exec(sttyCmd+tty.trim()+ttyOptions,function(error){
 				self.sendMessage(client,"ttyResizeDone",data);
 				self.term.resize(data.rows,data.cols);
 			});
@@ -111,8 +122,18 @@ TerminalSession.prototype = {
 	},
 	
 	sendMessage: function(client, method, data){
-		var msg = {"method":method, "data":data};
-		client.send(JSON.stringify(msg));
+		if(client === "broadcast"){
+			this.broadcast(method,data);
+		} else {
+			var msg = {"method":method, "data":data};
+			client.send(JSON.stringify(msg));
+		}
+	},
+	
+	broadcast: function(method, data){		
+		for(var clientNum in this.clients){
+			this.sendMessage(this.clients[clientNum], method, data);
+		}
 	},
 	
 	handleMessage: function(client, msg){		
@@ -127,28 +148,28 @@ TerminalSession.prototype = {
 
 
 io.on('connection', function(client){
-	client.initialized = false;
+	
 	client.on('message', function(msgText){
 		var msg = JSON.parse(msgText);
-		//The first message sent by the client must be the term they want
-		if(!client.initialized || msg.method == "init"){
-			
+
+		if(msg.method == "init"){
 			var id = msg.data.id;
 			if(!(id in termSessions)){
 				termSessions[id] = new TerminalSession(msg.data);
 			}
 			termSessions[id].newClient(client);
-			// termSessions[id].resize(client,msg.data);
-			// console.log(id + ': connection open (' + termSessions[id].connections + ' connected)');
+			// console.log(id + ': connection open (' + termSessions[id].clients.length + ' connected)');
 		}
 		else{
 			client.termSession.handleMessage(client, msg);
 		}
 	});
+	
 	client.on('disconnect', function(){
 		client.termSession.clientDisconnect(client);
-		// console.log(client.termSession.id + ': connection closed ('+client.termSession.connections+' connected)');		
+		// console.log(client.termSession.id + ': connection closed ('+client.termSession.clients.length+' connected)');		
 	});
+	
 });
 
 process.on('uncaughtException', function (err) {
