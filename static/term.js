@@ -18,6 +18,7 @@
 			this.redrawAll = false;
 			this.alternateScreenBufferStart = 0;
 			this.title = "";
+			this.debugOn = true;
 			this.flags = {	appCursorKeys: false,
 							specialScrollRegion: false,
 							alternateScreenBuffer: false,
@@ -136,7 +137,7 @@
 			if(this.flags.specialScrollRegion && this.scrollRegion[1] < newYScreenCoords){			
 				this.deleteLines(1);
 			} else if(this.flags.specialScrollRegion && this.scrollRegion[0] > newYScreenCoords){
-				console.warn("specialScrollRegion: Not Implemented "+this.scrollRegion+newYScreenCoords);
+				this.debug('warn',"specialScrollRegion: Not Implemented "+this.scrollRegion+newYScreenCoords);
 			} else {
 				this.dirtyLines[this.cursor.y] = true;
 				if (newPosition.x !== undefined) {
@@ -253,11 +254,11 @@
 				this.restoreCursor();
 			} else if(command === '=') {
 				this.flags.appKeypad = true;
-				console.warn("Application keypad: not implemented");
+				this.debug('warn',"Application keypad: not implemented");
 			} else if(command === '>') {
 				this.flags.appKeypad = false;
 			} else {
-				console.warn('Unhandled escape code ESC ' + command);
+				this.debug('warn','Unhandled escape code ESC ' + command);
 			}
 		},
 		
@@ -280,16 +281,16 @@
 				var newY = this.parseArg(args[0],1);
 				var newX = this.parseArg(args[1],1) - 1;
 				this.setCursor({ x: newX, y: this.toLineCoords(newY)});
-			} else if (command === 'J') { //Clear screen
+			} else if (command === 'J') { //Erase in Display
 				var firstLine  = this.windowFirstLine();
 				var lastLine   = Math.min(firstLine + this.rows, this.grid.length) - 1;
 				var cursorLine = this.cursor.y;
-				if (arg === 1) {
+				if (arg === 1) { // Erase Above
 					lastLine  = firstLine + this.rows - 1;
 					firstLine = cursorLine;
-				} else if (arg !== 2) {
+				} else if (arg !== 2) {	// Erase All
 					lastLine = cursorLine;
-				} else {
+				} else {		// 0 : Erase Below (default) , 3: Erase Saved Lines (xterm)
 					firstLine = lastLine;
 					lastLine  = firstLine + this.rows - 1;
 					this.setCursor({ y: firstLine });
@@ -299,15 +300,15 @@
 					this.grid[y] = emptyLine.slice(0);
 					this.dirtyLines[y] = true;
 				}
-			} else if (command === 'K') { //Clear line
+			} else if (command === 'K') { //Erase in Line
 				line = this.grid[this.cursor.y];
-				if (arg === 1) {
+				if (arg === 1) { //Erase to Left
 					this.grid[this.cursor.y] = this.emptyLineArray(this.cursor.x + 1).concat(line.slice(this.cursor.x + 1));
-				} else if (arg === 2) {
+				} else if (arg === 2) { // Erase All
 					this.grid[this.cursor.y] = [];
-				} else {
+				} else { // Erase to Right (default)
 					if (arg !== 0) {
-						console.warn('Unknown argument for CSI "K": ' + arg);
+						this.debug('warn','Unknown argument for CSI "K": ' + arg);
 					}
 					this.grid[this.cursor.y] = line.slice(0, this.cursor.x);
 				}
@@ -327,7 +328,8 @@
 				// Silently fail to send attributes
 				// will implement if they need to be sent for some reason
 				if(args[0] === '>'){
-					//\u001B[1;4.8.0;0c  //vt100
+					//\u001B[?1;2c		//Terminal.app
+					//\u001B[>0;95;c	//iTerm 2
 				}
 			} else if (command === 'h') { //Set Mode
 				arg = args[0];
@@ -343,7 +345,7 @@
 					this.alternateScreenBuffer();
 					this.saveCursor();
 				} else {
-					console.warn('Unknown argument for CSI "h": ' + JSON.stringify(arg));
+					this.debug('warn','Unknown argument for CSI "h": ' + JSON.stringify(arg));
 				}
 			} else if (command === 'l') { //Reset Mode
 				arg = args[0];
@@ -359,7 +361,7 @@
 					this.normalScreenBuffer();
 					this.restoreCursor();
 				} else {
-					console.warn('Unknown argument for CSI "l": ' + JSON.stringify(arg));
+					this.debug('warn','Unknown argument for CSI "l": ' + JSON.stringify(arg));
 				}
 			} else if (command === 'm') { //Set Graphics
 				if(args.length === 0){
@@ -402,7 +404,7 @@
 						this.cursor.attr &= ~0x00F0;
 						this.cursor.attr |= 8 << 4;
 					} else {
-						console.warn('Unhandled escape code CSI argument for "m": ' + arg);
+						this.debug('warn','Unhandled escape code CSI argument for "m": ' + arg);
 					}
 				}
 			} else if (command === 'r'){ //Set scrolling region (vi)
@@ -419,7 +421,7 @@
 					this.scrollRegion = [topRow,botRow];
 				}
 			} else {
-				console.warn('Unhandled escape code CSI ' + command + ' ' + JSON.stringify(args));
+				this.debug('warn','Unhandled escape code CSI ' + command + ' ' + JSON.stringify(args));
 			}
 		},
 		
@@ -428,19 +430,24 @@
 				// TODO: update document.title in ui
 				this.title = command.substr(2);
 			} else {
-				console.warn('Unhandled escape code OSC ' + JSON.stringify(command));
+				this.debug('warn','Unhandled escape code OSC ' + JSON.stringify(command));
 			}
 		},
 		
-		debugLog: function(text){
-			var esc = String.fromCharCode(9243);
-			var line = text.replace(/\u001b/g,esc);
-			line = JSON.stringify(line);
-			console.log(line);
+		debug: function(method,text){
+			if(!this.debugOn){
+				return;
+			}
+			if(typeof text === 'string'){
+				var esc = String.fromCharCode(9243);
+				var text = text.replace(/\u001b/g,esc);
+				text = JSON.stringify(text);
+			}
+			console[method](text);
 		},
 		
 		parseBuffer: function() {
-			//this.debugLog(this.buffer);
+			this.debug('log',this.buffer);
 			var currentLength = 0;
 			var matches;
 			while (currentLength !== this.buffer.length && this.buffer.length > 0) {
@@ -466,7 +473,7 @@
 						continue;
 					}
 					//TODO make it so esc esc or something like that wouldn't break term
-					console.warn('Unhandled escape codes ' + JSON.stringify(this.buffer));
+					this.debug('warn','Unhandled escape codes ' + JSON.stringify(this.buffer));
 				} else {
 					this.buffer = this.buffer.substr(1);
 					if (ch === '\u0007') {
@@ -482,7 +489,7 @@
 					} else if (ch >= ' ') {
 						this.enterChar(ch);
 					} else {
-						console.error('Unhandled character ' + JSON.stringify(ch));
+						this.debug('error','Unhandled character ' + JSON.stringify(ch));
 					}
 				}
 			}

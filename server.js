@@ -4,6 +4,7 @@
 var child_process = require('child_process');
 var fs = require('fs');
 var os = require('os');
+var tty = require('tty');
 
 var connect = require('connect');
 var io = require('socket.io');
@@ -63,6 +64,7 @@ function TerminalSession(data){
 		this.firstResizeDone = false;
 		this.termProcess = child_process.spawn(command,commandArgs);
 		this.term = new Term();
+		this.term.debugOn = false;
 		
 		var self = this;
 		this.termProcess.stdout.on('data', function(data) {
@@ -112,11 +114,15 @@ TerminalSession.prototype = {
 		var filearg = (os.type() === 'Linux')?'F':'f';
 		var getTtyCmd = "ps -e -o ppid= -o tty= | awk '$1 == "+this.termProcess.pid+" {print $2}'";
 		var sttyCmd = "stty -"+filearg+" /dev/";
-		var ttyOptions = " rows "+data.rows+" columns "+data.cols;
+		var rows = data.rows;
+		var cols = data.cols;
+		//var rows = tty.getWindowSize()[0];
+		//var cols = tty.getWindowSize()[1]
+		var ttyOptions = " rows "+rows+" columns "+cols;
 		child_process.exec(getTtyCmd,function(error, tty){
 			child_process.exec(sttyCmd+tty.trim()+ttyOptions,function(error){
-				self.sendMessage(client,"ttyResizeDone",data);
-				self.term.resize(data.rows,data.cols);
+				self.sendMessage(client,"ttyResizeDone",{'rows':rows,'cols':cols});
+				self.term.resize(rows,cols);
 			});
 		});
 	},
