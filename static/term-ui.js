@@ -150,8 +150,12 @@
 		
 		ttyResizeDone: function(data){
 			this.term.resize(data.rows,data.cols);
-			var termHeightPx = data.rows * this.characterHeight();
-			var termWidthPx = data.cols * this.characterWidth();
+			this.resizeUi();
+		},
+		
+		resizeUi: function(){
+			var termHeightPx = this.term.rows * this.characterHeight();
+			var termWidthPx = this.term.cols * this.characterWidth();
 			$(".loading-container, .term-bg").css({'height':termHeightPx,'width':termWidthPx});
 			$("#terminal").css({'width':termWidthPx});
 			this.lastScrollTop = $(window).scrollTop();
@@ -379,7 +383,16 @@
 		getMaxRows: function() {
 			return Math.floor($(window).height() / this.characterHeight());
 		},
-
+		
+		init: function(data) {
+			this.term.setState(data);
+			this.term.debugOn = true;
+			this.resizeUi();
+			this.term.redrawAll = true;
+			this.render();
+			this.scrollToBottom();
+		},
+		
 		output: function(data) {			
 			this.term.write(data);
 			this.render();
@@ -398,7 +411,7 @@
 			if( !"method" in msg || !"data" in msg){
 				return;
 			}
-			if(_(['output','ttyResizeDone']).contains(msg.method)){
+			if(_(['output','ttyResizeDone','init']).contains(msg.method)){
 				this[msg.method](msg.data);
 			}
 		}

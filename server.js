@@ -91,7 +91,7 @@ TerminalSession.prototype = {
 	newClient: function(client){
 		this.clients.push(client);
 		client.termSession = this;
-		//send current term state with size
+		this.sendMessage(client,"init",this.term.getState());
 	},
 	
 	clientDisconnect: function(client){

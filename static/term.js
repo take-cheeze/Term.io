@@ -6,19 +6,23 @@
 	
 	function Term(){
 		if ( this instanceof Term ) {
-			this.grid = [];
+			
+			// Ui specific / temporary vars
+			this.bell = function(){};
+			this.redrawAll = false;
+			this.debugOn = true;
 			this.dirtyLines = {};
+			this.buffer = '';
+			
+			// Vars to send from server to client on new term
+			this.grid = [];
 			this.cursor = { x: 0, y: 0, attr: 0x0088, visible: true };
 			this.savedCursor = {};
-			this.buffer = '';
 			this.cols = 80;
 			this.rows = 24;
-			this.bell = function(){};
 			this.scrollRegion = [1,24];
-			this.redrawAll = false;
 			this.alternateScreenBufferStart = 0;
 			this.title = "";
-			this.debugOn = true;
 			this.flags = {	appCursorKeys: false,
 							specialScrollRegion: false,
 							alternateScreenBuffer: false,
@@ -37,6 +41,27 @@
 	Term.prototype = {
 		
 		constructor: Term,
+		
+		getState: function() {
+			var serialized = {};
+			var toCopy = ['cols','rows','alternateScreenBufferStart','title'];
+			var toClone = ['grid','cursor','savedCursor','scrollRegion','flags'];
+			var self = this;
+			_(toCopy).each(function(attr){
+				serialized[attr] = self[attr];
+			})
+			_(toClone).each(function(attr){
+				serialized[attr] = _(self[attr]).clone();
+			})
+			
+			console.log(serialized);
+			
+			return serialized;
+		},
+		
+		setState: function(state) {
+			_(this).extend(state);
+		},
 		
 		getScreenAsText: function() {
 			var screen = "";
@@ -447,7 +472,7 @@
 		},
 		
 		parseBuffer: function() {
-			this.debug('log',this.buffer);
+			//this.debug('log',this.buffer);
 			var currentLength = 0;
 			var matches;
 			while (currentLength !== this.buffer.length && this.buffer.length > 0) {
