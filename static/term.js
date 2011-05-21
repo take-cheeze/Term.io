@@ -9,6 +9,7 @@
 			
 			// Ui specific / temporary vars
 			this.bell = function(){};
+			this.send = function(){};
 			this.redrawAll = false;
 			this.debugOn = true;
 			this.dirtyLines = {};
@@ -34,9 +35,9 @@
 	}
 	
 	//Escape sequence regular expressions
-	var rESC = /^\u001B([()#][0-9A-Za-z]|[0-9A-Za-z<>=])/,
-	rCSI = /^(?:\u001B\[|\u009B)([ -?]*)([@-~])/,
-	rOSC = /^\u001B\](.*)(?:\u0007|\u001B\\)/;
+	var rESC = /^\u001B([()#]?[ -Z_-~])/,
+	rCSI = /^\u001B\[([ -?]*)([@-~])/,
+	rOSC = /^\u001B\](\d+);(.*)(?:\007|\u001B\\)/;
 		
 	Term.prototype = {
 		
@@ -52,10 +53,7 @@
 			})
 			_(toClone).each(function(attr){
 				serialized[attr] = _(self[attr]).clone();
-			})
-			
-			console.log(serialized);
-			
+			})			
 			return serialized;
 		},
 		
@@ -68,7 +66,7 @@
 			var firstLine = this.windowFirstLine();
 			var numLines = this.windowFirstLine() + this.rows;
 			for(var i = firstLine; i < numLines; i++){
-				screen += this.renderLineAsText(i) + '\r\n';
+				screen += this.renderLineAsText(i) + '\n';
 			}
 			return screen;
 		},
@@ -338,10 +336,10 @@
 					this.grid[this.cursor.y] = line.slice(0, this.cursor.x);
 				}
 				this.dirtyLines[this.cursor.y] = true;
-			} else if (command === 'M') { //Delete line
-				this.deleteLines(this.parseArg(args[0],1));
 			} else if (command === 'L') { //Insert line
 				this.insertLines(this.parseArg(args[0],1));
+			} else if (command === 'M') { //Delete line
+				this.deleteLines(this.parseArg(args[0],1));
 			} else if (command === 'P') { //Delete
 				arg = this.parseArg(args[0],1);
 				if (arg > 0) {
@@ -350,12 +348,8 @@
 					this.dirtyLines[this.cursor.y] = true;
 				}
 			} else if (command === 'c'){ //Send device attributes
-				// Silently fail to send attributes
-				// will implement if they need to be sent for some reason
-				if(args[0] === '>'){
-					//\u001B[?1;2c		//Terminal.app
-					//\u001B[>0;95;c	//iTerm 2
-				}
+				// VT100 with Advanced Video Option (a common term identifier)
+				this.send('\u001B[?1;2c');
 			} else if (command === 'h') { //Set Mode
 				arg = args[0];
 				if(arg === '4'){ //Insert mode
@@ -450,8 +444,9 @@
 			}
 		},
 		
-		escapeCodeOSC: function(command) {
-			if (command.substr(0, 2) === '0;') {
+		escapeCodeOSC: function(number,value) {
+			number = parseInt(number);
+			if (number === 0) {
 				// TODO: update document.title in ui
 				this.title = command.substr(2);
 			} else {
@@ -465,7 +460,7 @@
 			}
 			if(typeof text === 'string'){
 				var esc = String.fromCharCode(9243);
-				var text = text.replace(/\u001b/g,esc);
+				var text = text.replace(/\u001B/g,esc);
 				text = JSON.stringify(text);
 			}
 			console[method](text);
@@ -478,7 +473,7 @@
 			while (currentLength !== this.buffer.length && this.buffer.length > 0) {
 				currentLength = this.buffer.length;
 				var ch = this.buffer.substr(0, 1);
-				if (ch === '\u001B' || ch === '\u009B') {
+				if (ch === '\u001B') {
 					matches = this.buffer.match(rESC);
 					if (matches) {
 						this.buffer = this.buffer.substr(matches[0].length);

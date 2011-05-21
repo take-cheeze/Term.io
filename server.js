@@ -108,6 +108,10 @@ TerminalSession.prototype = {
 		this.termProcess.stdin.write(data);
 	},
 	
+	send: function(client, data){
+		this.termProcess.stdin.write(data);
+	},
+	
 	resize: function(client, data){
 		//return
 		var self = this;
@@ -146,7 +150,7 @@ TerminalSession.prototype = {
 		if( !"method" in msg || !"data" in msg){
 			return;
 		}
-		if(_(['input','resize']).contains(msg.method)){
+		if(_(['input','resize','send']).contains(msg.method)){
 			this[msg.method](client, msg.data);
 		}		
 	}

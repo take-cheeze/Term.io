@@ -93,8 +93,13 @@
 			this.sendMessage("input",data);
 		},
 		
+		send: function(data){
+			this.sendMessage("send",data);
+		},
+		
 		onConnect: function(termId, stdin){			
 			TermJS.setStdin(stdin);
+			this.term.send = _.bind(this.send,this);
 			this.sendMessage("init",{"id":termId,"rows":this.getMaxRows(),"cols":this.getMaxCols()});
 			$('.loading-container').hide();
 		},
