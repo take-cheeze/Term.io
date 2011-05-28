@@ -110,6 +110,9 @@
 		},
 		
 		onKeydown: function(e) {
+			if( document.activeElement !== document.body){
+				return;
+			}
 			var mods   = e.shiftKey || e.ctrlKey || e.altKey;
 			var onlyCtrl  = e.ctrlKey  && !(e.shiftKey || e.altKey);
 			var ctrlShift = e.ctrlKey  && e.shiftKey && !e.altKey;
@@ -140,6 +143,9 @@
 		},
 		
 		onKeypress: function(e) {
+			if( document.activeElement !== document.body){
+				return;
+			}
 			this.input(String.fromCharCode(e.which));
 			return false;
 		},
