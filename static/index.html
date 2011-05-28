@@ -3,7 +3,7 @@
 	<head>
 		<meta charset='utf-8'>
 		<title>JS-Term</title>
-		<link rel="stylesheet" href="style.css">
+		<link rel="stylesheet" href="css/style.css">
 	</head>
 	<body>
 		<div class='terminal' id='terminal'class='a0088'></div>
@@ -14,9 +14,9 @@
 			<param name="movie" value="flashbeep-general.swf" />
 			<param name="FlashVars" value="onLoad=isReady" />
 		</object>
-		<script src='jquery-1.5.1.min.js'></script>
-		<script src='underscore-min.js'></script>
-		<script src='socket.io.min.js'></script>
+		<script src='lib/jquery-1.6.1.min.js'></script>
+		<script src='lib/underscore-min.js'></script>
+		<script src='lib/socket.io.min.js'></script>
 		<script src='term.js'></script>
 		<script src='term-ui.js'></script>
 		<script>
@@ -26,7 +26,7 @@
 				socket.connect();
 
 				socket.on('connect', function(){
-					TermJS.onConnect(location.pathname,function(data){socket.send(data);})					
+					TermJS.onConnect(location.pathname,function(data){socket.send(data);})
 				});
 				
 				socket.on('message', function(data){
