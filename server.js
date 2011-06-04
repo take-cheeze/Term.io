@@ -10,7 +10,7 @@ var connect = require('connect');
 var io = require('socket.io');
 
 require.paths.push(__dirname+"/static");
-var _ = require('underscore-min.js');
+var _ = require('underscore');
 var Term = require('term.js');
 var noop = function(){};
 

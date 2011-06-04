@@ -20,7 +20,7 @@
 			} else {
 				this.$scrollingElt = $(window);
 			}
-
+			this.plugins = {};
 			this.cursorId = 'cursor';
 			this.cursorAttr = 0;
 			this.stylesheetId = 'terminal-css';
@@ -100,6 +100,7 @@
 		onConnect: function(termId, stdin){			
 			TermJS.setStdin(stdin);
 			this.term.send = _.bind(this.send,this);
+			this.term.appMessage = _.bind(this.appMessage,this);
 			this.sendMessage("init",{"id":termId,"rows":this.getMaxRows(),"cols":this.getMaxCols()});
 			$('.loading-container').hide();
 		},
@@ -157,6 +158,13 @@
 		
 		onWindowResize: function(){
 			this.sendMessage("resize",{"rows":this.getMaxRows(),"cols":this.getMaxCols()});
+		},
+		
+		appMessage: function(data){
+			if( data.plugin in this.plugins ){
+				this.plugins[data.plugin][data.method].call(this, data);
+			}
+			// TODO: handle loading plugins if they are not loaded
 		},
 		
 		ttyResizeDone: function(data){

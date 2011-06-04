@@ -2,7 +2,7 @@
 	"use strict";
 	
 	var commonjs = typeof module !== 'undefined' && module.exports;
-	var _ = commonjs ? require('underscore-min.js') : window._;
+	var _ = commonjs ? require('underscore') : window._;
 	
 	function Term(){
 		if ( this instanceof Term ) {
@@ -10,6 +10,7 @@
 			// Ui specific / temporary vars
 			this.bell = function(){};
 			this.send = function(){};
+            this.appMessage = function(){};
 			this.redrawAll = false;
 			this.debugOn = true;
 			this.dirtyLines = {};
@@ -37,7 +38,7 @@
 	//Escape sequence regular expressions
 	var rESC = /^\u001B([()#]?[ -Z_-~])/,
 	rCSI = /^\u001B\[([ -?]*)([@-~])/,
-	rOSC = /^\u001B\](\d+);(.*)(?:\007|\u001B\\)/;
+	rOSC = /^\u001B\](\d+);([^\u0007]*)(?:\u0007|\u001B\\)/;
 		
 	Term.prototype = {
 		
@@ -448,7 +449,10 @@
 			number = parseInt(number);
 			if (number === 0) {
 				// TODO: update document.title in ui
-				this.title = command.substr(2);
+				this.title = value;
+			} else if (number === 99) {
+				var data = JSON.parse(value);
+                this.appMessage(data);
 			} else {
 				this.debug('warn','Unhandled escape code OSC ' + JSON.stringify(command));
 			}
