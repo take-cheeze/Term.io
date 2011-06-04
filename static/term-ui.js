@@ -6,13 +6,9 @@
 
 	function Terminal(){
 		if ( this instanceof Terminal ) {
-			var lowLevelTerm = new Term();
-			lowLevelTerm.bell = function() {
-				document.getElementById('beep').play(3);
-			};
+			this.term = new Term();
 			
 			this.$termdiv = $('#terminal');
-			
 			// window or div
 			this.scrollingType = 'window';
 			if(this.scrollingType === 'div'){
@@ -25,44 +21,19 @@
 			this.cursorAttr = 0;
 			this.stylesheetId = 'terminal-css';
 			this.cursorBlinkId = undefined;
-			this.term = lowLevelTerm;
 			this.stdin = $.noop;
 			this.colors = null;
 			this.lastScrollTop = null;
 			this.lastScrollSnap = null;
-			this.cachedNumberOfLines = null;
-			this.cachedCharWidth = null;
-			this.cachedCharHeight = null;
+			this.numLines = 0;
+			this.charWidth = 7;
+			this.charHeight = 14;
 			this.lastMessageType = INPUT;
 			this.themes = {
-				'Tango': [
-					'#000000', '#cc0000', '#4e9a06', '#c4a000', '#3465a4', '#75507b', '#06989a', '#d3d7cf',
-					'#555753', '#ef2929', '#8ae234', '#fce94f', '#729fcf', '#ad7fa8', '#34e2e2', '#eeeeec',
-					'#ffffff', '#1a1a1a' ],
-				'Linux Terminal': [
-					'#000', '#a00', '#0a0', '#a50', '#00a', '#a0a', '#0aa', '#aaa',
-					'#555', '#f55', '#5f5', '#ff5', '#55f', '#f5f', '#5ff', '#fff',
-					'#000', '#fff' ],
-				'Standard VGA': [
-					'#000000', '#aa0000', '#00aa00', '#aa5500', '#0000aa', '#aa00aa', '#00aaaa', '#aaaaaa',
-					'#555555', '#ff5555', '#55ff55', '#ffff55', '#5555ff', '#ff55ff', '#55ffff', '#ffffff',
-					'#ffffff', '#1a1a1a'],
-				'cmd.exe': [
-					'#000000', '#800000', '#080000', '#808000', '#000080', '#800080', '#008080', '#c0c0c0', 
-					'#808080', '#ff0000', '#00ff00', '#ffff00', '#0000ff', '#ff00ff', '#00ffff', '#ffffff',
-					'#ffffff', '#1a1a1a'],
 				'Terminal.app': [
 					'#000000', '#c23621', '#25bc24', '#adad27', '#492ee1', '#d338d3', '#33bbc8', '#cbcccd', 
 					'#818383', '#fc391f', '#25bc24', '#eaec23', '#5833ff', '#f935f8', '#14f0f0', '#e9ebeb',
-					'#ffffff', '#1a1a1a'],
-				'PuTTY': [
-					'#000000', '#bb0000', '#00bb00', '#bbbb00', '#0000bb', '#bb00bb', '#00bbbb', '#bbbbbb', 
-					'#555555', '#ff5555', '#31e722', '#ffff55', '#5555ff', '#ff55ff', '#55ffff', '#ffffff',
-					'#ffffff', '#1a1a1a'],
-				'xterm': [
-					'#000000', '#cd0000', '#00cd00', '#cdcd00', '#0000ee', '#cd00cd', '#00cdcd', '#e5e5e5', 
-					'#7f7f7f', '#ff0000', '#00ff00', '#ffff00', '#5c5cff', '#ff00ff', '#00ffff', '#ffffff',
-					'#ffffff', '#1a1a1a']	
+					'#ffffff', '#1a1a1a']
 			};
 			
 			var debouncedScrollSnap = _.debounce(_.bind(this.scrollSnap, this),150);
@@ -97,10 +68,15 @@
 			this.sendMessage("send",data);
 		},
 		
+		bell: function(){
+			document.getElementById('beep').play(3);
+		},
+		
 		onConnect: function(termId, stdin){			
 			TermJS.setStdin(stdin);
 			this.term.send = _.bind(this.send,this);
 			this.term.appMessage = _.bind(this.appMessage,this);
+			this.term.bell = this.bell;
 			this.sendMessage("init",{"id":termId,"rows":this.getMaxRows(),"cols":this.getMaxCols()});
 			$('.loading-container').hide();
 		},
@@ -215,7 +191,7 @@
 		},
 
 		compileThemeToCss: function() {
-			var css = '\r\n';
+			var css = '';
 			var misc, bg, fg;
 			for (misc = 0; misc <= 3; misc++) {
 				for (bg = 0; bg <= 8; bg++) {
@@ -299,7 +275,7 @@
 			} else {
 				toRender = _(this.term.dirtyLines).chain().keys().map(function(a){return parseInt(a,10);}).value();
 			}
-			this.cachedNumberOfLines = null;
+			this.numLines = null;
 			var i;
 			for (i = 0; i < toRender.length; i++) {
 				var lineNo = toRender[i];
@@ -310,21 +286,21 @@
 					var j;
 					for (j = 0; j < missingLines; j++) {
 						html += '<div></div>';
-						this.cachedNumberOfLines++;
+						this.numLines++;
 					}
 					this.$termdiv.append(html);
 				}
 				var $div = $("<div>");
 				if (missingLines === 1){
 					this.$termdiv.append($div);
-					this.cachedNumberOfLines++;
+					this.numLines++;
 				} else {					
 					$div = this.$termdiv.children().eq(lineNo);
 					$div.empty();
 				}
 				this.renderLineAsHtml(lineNo,$div);
 			}
-			this.cachedNumberOfLines = null;
+			this.numLines = null;
 			this.term.dirtyLines = {}; // Reset list of dirty lines after rendering
 		},
 		
@@ -377,28 +353,28 @@
 		},
 
 		numberOfLines: function() {
-			if (!this.cachedNumberOfLines) {
-				this.cachedNumberOfLines = this.$termdiv.find('div').size();
+			if (!this.numLines) {
+				this.numLines = this.$termdiv.find('div').size();
 			}
-			return this.cachedNumberOfLines;
+			return this.numLines;
 		},
 
 		characterWidth: function() {
 			return 7;
 			// // TODO make work before terminal is initialized
-			// if (!this.cachedCharWidth) {
-			//	this.cachedCharWidth = $('#'+this.cursorId).innerWidth();
+			// if (!this.charWidth) {
+			//	this.charWidth = $('#'+this.cursorId).innerWidth();
 			// }
-			// return this.cachedCharWidth;
+			// return this.charWidth;
 		},
 
 		characterHeight: function() {
 			return 14;
 			// // TODO make work before terminal is initialized
-			// if (!this.cachedCharHeight) {
-			//	this.cachedCharHeight = $('#'+this.g).find('div:first').innerHeight();
+			// if (!this.charHeight) {
+			//	this.charHeight = $('#'+this.g).find('div:first').innerHeight();
 			// }
-			// return this.cachedCharHeight;
+			// return this.charHeight;
 		},
 
 		getMaxCols: function() {
@@ -440,7 +416,6 @@
 				this[msg.method](msg.data);
 			}
 		}
-	
 	};
 
 	window.TermJS = Terminal();
