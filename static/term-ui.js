@@ -216,9 +216,10 @@
 
 		compileThemeToCss: function() {
 			var css = '\r\n';
-			for (var misc = 0; misc <= 3; misc++) {
-				for (var bg = 0; bg <= 8; bg++) {
-					for (var fg = 0; fg <= 8; fg++) {
+			var misc, bg, fg;
+			for (misc = 0; misc <= 3; misc++) {
+				for (bg = 0; bg <= 8; bg++) {
+					for (fg = 0; fg <= 8; fg++) {
 						var attr = misc << 8 | bg << 4 | fg;
 						var classSel = '.' + this.attrToClass(attr);
 						css += classSel + ' { ' + this.attributeToCss(attr) + ' }\r\n';
@@ -236,7 +237,9 @@
 		renderLineAsHtml: function(lineNo, $div) {
 			var cursor = this.term.cursor;
 			var grid = this.term.grid;
-			if (lineNo >= grid.length) return;
+			if (lineNo >= grid.length){
+				return;
+			}
 			var line = grid[lineNo];
 			var lineLength = line.length;
 			if (lineNo === cursor.y && cursor.x + 1 > lineLength) {
@@ -246,7 +249,8 @@
 			var spanOpen = false;
 			var lastStyle = null;
 			var text = "";
-			for (var i = 0; i < lineLength; i++) {
+			var i;
+			for (i = 0; i < lineLength; i++) {
 				var ach = line[i] || [cursor.attr, ' '];
 				var a  = ach[0];
 				var ch = ach[1];
@@ -259,7 +263,7 @@
 				var style = (a & 0x400 ? ' style="text-decoration: underline;"' : '');
 				
 
-				if(a != lastStyle){
+				if(a !== lastStyle){
 					if(text.length > 0){
 						if(spanOpen){
 							$div.find('span:last').text(text);
@@ -269,7 +273,7 @@
 					}
 					spanOpen = false;
 					text = '';
-					if(a != 0x88){
+					if(a !== 0x88){
 						$div.append('<span class="' + this.attrToClass(a) + '"' + cursorId + style + '>');
 						spanOpen = true;
 					}
@@ -296,20 +300,22 @@
 				toRender = _(this.term.dirtyLines).chain().keys().map(function(a){return parseInt(a,10);}).value();
 			}
 			this.cachedNumberOfLines = null;
-			for (var i = 0; i < toRender.length; i++) {
+			var i;
+			for (i = 0; i < toRender.length; i++) {
 				var lineNo = toRender[i];
 				var missingLines = lineNo - this.numberOfLines() + 1;
 				if (missingLines > 1) {
 					console.error("Missing Lines: should this happen?");
 					var html = '';
-					for (var j = 0; j < missingLines; j++) {
+					var j;
+					for (j = 0; j < missingLines; j++) {
 						html += '<div></div>';
 						this.cachedNumberOfLines++;
 					}
 					this.$termdiv.append(html);
 				}
 				var $div = $("<div>");
-				if (missingLines == 1){
+				if (missingLines === 1){
 					this.$termdiv.append($div);
 					this.cachedNumberOfLines++;
 				} else {					
@@ -344,7 +350,7 @@
 
 			if (termTop !== this.lastScrollTop) {
 				// Make room to scroll
-				if(this.scrollingType == "window"){
+				if(this.scrollingType === "window"){
 					$('html').height(termTop + $(window).height());
 				}
 				this.$scrollingElt.scrollTop(termTop);
@@ -358,7 +364,7 @@
 			var cursorClass = this.attrToClass( this.cursorAttr);
 			var invClass = this.attrToClass(this.cursorAttr ^ 0x200);
 			this.cursorBlinkId = window.setInterval(function() {
-				if(cursor.attr('class') == cursorClass){
+				if(cursor.attr('class') === cursorClass){
 					cursor.removeClass().addClass(invClass);
 				} else {
 					cursor.removeClass().addClass(cursorClass);
@@ -427,7 +433,7 @@
 		
 		handleMessage: function(msgText){
 			var msg = JSON.parse(msgText);
-			if( !"method" in msg || !"data" in msg){
+			if( !("method" in msg) || !("data" in msg)){
 				return;
 			}
 			if(_(['output','ttyResizeDone','init']).contains(msg.method)){
@@ -438,4 +444,4 @@
 	};
 
 	window.TermJS = Terminal();
-})();
+}());

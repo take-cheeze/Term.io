@@ -51,10 +51,10 @@
 			var self = this;
 			_(toCopy).each(function(attr){
 				serialized[attr] = self[attr];
-			})
+			});
 			_(toClone).each(function(attr){
 				serialized[attr] = _(self[attr]).clone();
-			})			
+			});			
 			return serialized;
 		},
 		
@@ -66,7 +66,8 @@
 			var screen = "";
 			var firstLine = this.windowFirstLine();
 			var numLines = this.windowFirstLine() + this.rows;
-			for(var i = firstLine; i < numLines; i++){
+			var i;
+			for(i = firstLine; i < numLines; i++){
 				screen += this.renderLineAsText(i) + '\n';
 			}
 			return screen;
@@ -82,8 +83,9 @@
 				lineLength = this.cursor.x + 1;
 			}
 			var text = '';
-			for (var i = 0; i < lineLength; i++) {
-				if( typeof(line[i]) == 'undefined'){
+			var i;
+			for (i = 0; i < lineLength; i++) {
+				if( typeof(line[i]) === 'undefined'){
 					text += ' ';
 				} else {
 					text += line[i][1];
@@ -125,7 +127,8 @@
 			maxSize = maxSize || this.cols;
 			
 			var array = [[this.cursor.attr, ' ']];
-			for (var i = 0; i < 9; i++) {
+			var i;
+			for (i = 0; i < 9; i++) {
 				array = array.concat(array);
 			}
 			return array.slice(0, maxSize);
@@ -133,7 +136,8 @@
 		
 		blankLines: function(lines) {
 			var blanks = [];
-			for(var i = 0; i < lines; i++){
+			var i;
+			for(i = 0; i < lines; i++){
 				blanks.push([]);
 			}
 			return blanks;
@@ -221,7 +225,8 @@
 			var blanks = this.blankLines(num);
 			var g = this.grid;
 			this.grid = g.slice(0,scrollTop).concat(g.slice(scrollTop + num, scrollBotton + 1),blanks,g.slice(scrollBotton + 1));
-			for (var y = scrollTop; y <= scrollBotton; y++) {
+			var y;
+			for (y = scrollTop; y <= scrollBotton; y++) {
 				this.dirtyLines[y] = true;
 			}
 		},
@@ -232,7 +237,8 @@
 			var blanks = this.blankLines(num);
 			var g = this.grid;
 			this.grid = g.slice(0,scrollTop).concat(blanks,g.slice(scrollTop,scrollBotton),g.slice(scrollBotton + 1));
-			for (var line = scrollTop; line <= scrollBotton; line++) {
+			var line;
+			for (line = scrollTop; line <= scrollBotton; line++) {
 				this.dirtyLines[line] = true;
 			}
 		},
@@ -320,7 +326,8 @@
 					this.setCursor({ y: firstLine });
 				}
 				var emptyLine = this.emptyLineArray(this.cols);
-				for (var y = firstLine; y <= lastLine; y++) {
+				var y;
+				for (y = firstLine; y <= lastLine; y++) {
 					this.grid[y] = emptyLine.slice(0);
 					this.dirtyLines[y] = true;
 				}
@@ -387,7 +394,8 @@
 				if(args.length === 0){
 					args = [0];
 				}
-				for (var i = 0; i < args.length; i++) {
+				var i;
+				for (i = 0; i < args.length; i++) {
 					arg = this.parseArg(args[i],0);
 					// Bits
 					// 0-3	Text color
@@ -434,7 +442,7 @@
 					topRow = this.parseArg(args[0],0);
 					botRow = this.parseArg(args[1],0);
 				}
-				if(topRow === 1 && botRow == this.rows){
+				if(topRow === 1 && botRow === this.rows){
 					this.flags.specialScrollRegion = false;
 				} else {
 					this.flags.specialScrollRegion = true;
@@ -446,7 +454,7 @@
 		},
 		
 		escapeCodeOSC: function(number,value) {
-			number = parseInt(number);
+			number = parseInt(number, 10);
 			if (number === 0) {
 				// TODO: update document.title in ui
 				this.title = value;
@@ -454,7 +462,7 @@
 				var data = JSON.parse(value);
                 this.appMessage(data);
 			} else {
-				this.debug('warn','Unhandled escape code OSC ' + JSON.stringify(command));
+				this.debug('warn','Unhandled escape code OSC ' + number);
 			}
 		},
 		
@@ -464,7 +472,7 @@
 			}
 			if(typeof text === 'string'){
 				var esc = String.fromCharCode(9243);
-				var text = text.replace(/\u001B/g,esc);
+				text = text.replace(/\u001B/g,esc);
 				text = JSON.stringify(text);
 			}
 			console[method](text);
@@ -540,4 +548,4 @@
 	    window.Term = Term;
 	}
 	
-})();
+}());

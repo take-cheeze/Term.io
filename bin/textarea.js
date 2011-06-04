@@ -23,7 +23,6 @@ process.on('SIGINT', function () {
 });
 
 fs.readFile(process.argv[2], function (err, data) {
-	if (err) throw err;
 	load(data.toString());
 });
 
@@ -31,7 +30,6 @@ fs.readFile(process.argv[2], function (err, data) {
 //write
 function save(data){
 	fs.writeFile(process.argv[2], data, function (err) {
-		if (err) throw err;
 		console.log('saved');
 	});
 }
@@ -44,7 +42,7 @@ function close(){
 
 // send events to browser
 function load(data){
-	sendMessage({plugin:'textarea','method':'load','data':data})
+	sendMessage({plugin:'textarea','method':'load','data':data});
 }
 
 

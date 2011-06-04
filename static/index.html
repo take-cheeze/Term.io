@@ -6,7 +6,7 @@
 		<link rel="stylesheet" href="css/style.css">
 	</head>
 	<body>
-		<div class='terminal' id='terminal'class='a0088'></div>
+		<div class='terminal a0088' id='terminal'></div>
 		<div class='term-bg'></div>
 		<div class='loading-container'><div class='loading'></div></div>
 		<div id='loading'></div>
@@ -25,11 +25,11 @@
 		<script>
 			$(function() {
 				"use strict";
-				var socket = new io.Socket(location.hostname, {secure:location.protocol == "https:"});
+				var socket = new io.Socket(location.hostname, {secure:location.protocol === "https:"});
 				socket.connect();
 
 				socket.on('connect', function(){
-					TermJS.onConnect(location.pathname,function(data){socket.send(data);})
+					TermJS.onConnect(location.pathname,function(data){socket.send(data);});
 				});
 				
 				socket.on('message', function(data){

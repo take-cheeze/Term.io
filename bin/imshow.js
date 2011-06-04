@@ -12,7 +12,7 @@ load('data:'+imageMime+';base64,'+imageBase64);
 
 // send events to browser
 function load(dataurl){
-	sendMessage({plugin:'imshow','method':'load','dataurl':dataurl})
+	sendMessage({plugin:'imshow','method':'load','dataurl':dataurl});
 }
 
 // Api

@@ -45,7 +45,7 @@ server.use(function(req, res, next){
     } else {
 		next();
 	}
-})
+});
 server.use(function(req, res, next){
     if (/^\/\w+$/.test(req.url)) {
         req.url = '/';
@@ -80,7 +80,7 @@ function TerminalSession(data){
 		});
 		
 	} else {
-		return new TerminalSession(id);
+		return new TerminalSession(data);
 	}
 }
 
@@ -140,14 +140,15 @@ TerminalSession.prototype = {
 		}
 	},
 	
-	broadcast: function(method, data){		
-		for(var clientNum in this.clients){
+	broadcast: function(method, data){
+		var clientNum;
+		for(clientNum in this.clients){
 			this.sendMessage(this.clients[clientNum], method, data);
 		}
 	},
 	
 	handleMessage: function(client, msg){		
-		if( !"method" in msg || !"data" in msg){
+		if( !("method" in msg) || !("data" in msg)){
 			return;
 		}
 		if(_(['input','resize','send']).contains(msg.method)){
@@ -162,7 +163,7 @@ io.on('connection', function(client){
 	client.on('message', function(msgText){
 		var msg = JSON.parse(msgText);
 
-		if(msg.method == "init"){
+		if(msg.method === "init"){
 			var id = msg.data.id;
 			if(!(id in termSessions)){
 				termSessions[id] = new TerminalSession(msg.data);

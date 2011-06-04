@@ -1,3 +1,5 @@
+@charset "UTF-8";
+
 /* css specific to window scrolling: */
 body {
 	overflow-y: scroll;
