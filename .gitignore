@@ -11,3 +11,6 @@ certificate.pem
 
 # Config
 config.json
+
+#npm
+node_modules/
