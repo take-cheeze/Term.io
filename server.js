@@ -9,7 +9,7 @@ var tty = require('tty');
 var connect = require('connect');
 var io = require('socket.io');
 
-require.paths.push(__dirname+"/static");
+require.paths.push(__dirname+"/public");
 var _ = require('underscore');
 var Term = require('term.js');
 var noop = function(){};
