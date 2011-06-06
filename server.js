@@ -52,7 +52,7 @@ server.use(function(req, res, next){
     }
     next();
 });
-server.use(connect['static'](__dirname + '/static'));
+server.use(connect['static'](__dirname + '/public'));
 
 
 function TerminalSession(data){
