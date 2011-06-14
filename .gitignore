@@ -14,3 +14,7 @@ config.json
 
 #npm
 node_modules/
+
+#nohup
+*.out
+
