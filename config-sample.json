@@ -2,7 +2,7 @@
     "port": 8080,
     "ssl": {
         "on": false,
-        "keyPath": "privatekey.pem",
-        "certPath": "certificate.pem" 
+        "keyPath": "ssl/privatekey.pem",
+        "certPath": "ssl/certificate.pem" 
     }
 }

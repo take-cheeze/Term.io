@@ -91,6 +91,8 @@ catch(err){
 }
 startServer(config);
 
+// child_process.exec('./lib/ssl-keygen.sh');
+
 // process.on('uncaughtException', function (err) {
 //   console.log('Caught exception: ' + err);
 // });
