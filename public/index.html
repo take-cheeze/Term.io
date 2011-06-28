@@ -9,14 +9,14 @@
 		<div class='terminal a0088' id='terminal'></div>
 		<div class='term-bg'></div>
 		<div class='loading-container'><div class='loading'></div></div>
-		<div id='loading'></div>
+
 		<object id="beep" type="application/x-shockwave-flash" data="flashbeep-general.swf" width="1" height="1">
 			<param name="movie" value="flashbeep-general.swf" />
 			<param name="FlashVars" value="onLoad=isReady" />
 		</object>
 		<script src='lib/jquery-1.6.1.min.js'></script>
 		<script src='lib/underscore-min.js'></script>
-		<script src='lib/socket.io.min.js'></script>
+		<script src="/socket.io/socket.io.js"></script>
 		<script src='term.js'></script>
 		<script src='term-ui.js'></script>
 		<script src='plugins/notify.js'></script>
@@ -25,8 +25,7 @@
 		<script>
 			$(function() {
 				"use strict";
-				var socket = new io.Socket(location.hostname, {secure:location.protocol === "https:"});
-				socket.connect();
+				var socket = io.connect();
 
 				socket.on('connect', function(){
 					TermJS.onConnect(location.pathname,function(data){socket.send(data);});
@@ -42,7 +41,6 @@
 				
 				TermJS.theme(TermJS.themes['Terminal.app']);
 				
-
 			/*
 				// Simple echo terminal
 				TermJS.output('\r\n> ');

@@ -31,7 +31,7 @@ function startServer(config){
 	}
 
 	server.listen(config.port);
-	var io = socketio.listen(server,{log: function(){}});
+	var io = socketio.listen(server, {log: function(){}});
 	server.use(function(req, res, next){
 		if (req.url === '/') {
 			res.writeHead(302, { 'Location': '/'+(_.size(termSessions) + 1) });
@@ -48,7 +48,7 @@ function startServer(config){
 	});
 	server.use(connect['static'](__dirname + '/public'));
 
-	io.on('connection', function(client){
+	io.sockets.on('connection', function(client){
 	
 		client.on('message', function(msgText){
 			var msg = JSON.parse(msgText);
