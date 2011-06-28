@@ -1,0 +1,21 @@
+{
+"name": "Term.io",
+"version": "0.1.0",
+"description": "Term.io is a browser based command line that lets you run all normal command-line apps as well as special apps that are run from the command line and use the web browser as a gui.",
+"homepage": "http://github.com/croddin/Term.io",
+"keywords": ["terminal","bash"],
+"author": "Craig Roddin <craig.roddin@gmail.com>",
+"contributors": [ 
+  { "name": "Bjarke Walling", "email": "bwp@bwp.dk" }
+],
+"dependencies": {
+  "connect": ">= 1.5.1",
+  "underscore": ">= 1.1.6",
+  "socket.io": ">= 0.7.2"
+},
+"repository": { "type" : "git",
+"url" : "http://github.com/croddin/Term.io.git"
+},
+"engines": { "node": ">= 0.4.0" },
+"private":true
+}
