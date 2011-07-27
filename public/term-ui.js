@@ -12,15 +12,17 @@
 			// window or div
 			this.scrollingType = 'window';
 			if(this.scrollingType === 'div'){
+				$('body').addClass('div-scroll');
 				this.$scrollingElt = this.$termdiv;
 			} else {
+				$('body').addClass('window-scroll');
 				this.$scrollingElt = $(window);
 			}
 			this.plugins = {};
 			this.cursorId = 'cursor';
 			this.cursorAttr = 0;
 			this.stylesheetId = 'terminal-css';
-			this.cursorBlinkId = undefined;
+			this.cursorBlink = undefined;
 			this.stdin = $.noop;
 			this.colors = null;
 			this.lastScrollTop = null;
@@ -37,7 +39,7 @@
 			};
 			
 			var debouncedScrollSnap = _.debounce(_.bind(this.scrollSnap, this),150);
-			var throttledResize = _.throttle(_.bind(this.onWindowResize,this),200);
+			var throttledResize = _.throttle(_.bind(this.onResize,this),200);
 			$(window).bind('scroll',debouncedScrollSnap);
 			$(window).bind('resize',debouncedScrollSnap);
 			$(window).bind('resize',throttledResize);
@@ -132,7 +134,7 @@
 			return false;
 		},
 		
-		onWindowResize: function(){
+		onResize: function(){
 			this.sendMessage("resize",{"rows":this.getMaxRows(),"cols":this.getMaxCols()});
 		},
 		
@@ -339,7 +341,7 @@
 			var cursor = $('#' + this.cursorId);
 			var cursorClass = this.attrToClass( this.cursorAttr);
 			var invClass = this.attrToClass(this.cursorAttr ^ 0x200);
-			this.cursorBlinkId = window.setInterval(function() {
+			this.cursorBlink = window.setInterval(function() {
 				if(cursor.attr('class') === cursorClass){
 					cursor.removeClass().addClass(invClass);
 				} else {
@@ -349,7 +351,7 @@
 		},
 
 		stopCursorBlinking: function() {
-			window.clearInterval(this.cursorBlinkId);
+			window.clearInterval(this.cursorBlink);
 		},
 
 		numberOfLines: function() {
@@ -378,11 +380,11 @@
 		},
 
 		getMaxCols: function() {
-			return Math.floor($(window).width() / this.characterWidth());
+			return Math.floor(this.$scrollingElt.width() / this.characterWidth());
 		},
 
 		getMaxRows: function() {
-			return Math.floor($(window).height() / this.characterHeight());
+			return Math.floor(this.$scrollingElt.height() / this.characterHeight());
 		},
 		
 		init: function(data) {

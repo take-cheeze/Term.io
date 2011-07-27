@@ -1,33 +1,39 @@
 @charset "UTF-8";
 
-/* css specific to window scrolling: */
-body {
+/* css specific to full window scrolling: */
+/* term bg height and width
+24 rows * 14 px
+80 cols *  7 px
+*/
+
+body.window-scroll {
 	overflow-y: scroll;
 }
 
-.term-bg{
+.window-scroll .term-bg{
 	z-index:-1;
 	position:absolute;
 	left:0px;
 	top:0px;
-	height: 336px; /* 24 rows * 14 px */
-	width: 560px;  /* 80 cols *  7 px */
+	height: 336px;
+	width: 560px;
 	padding:0px;
 	margin:auto;
 	background-color:white;
 }
 
-.terminal{
+.window-scroll .terminal{
 	height: auto;
 }
+
 /* css specific to div scrolling: */
-/*
-.terminal{
+
+.div-scroll .terminal{
 	overflow-y: scroll;		
 	padding-right: 15px;	
 	height: 336px;
 }  
-*/
+
 /* general css: */
 
 body {
