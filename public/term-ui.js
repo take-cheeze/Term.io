@@ -38,15 +38,17 @@
 					'#ffffff', '#1a1a1a']
 			};
 			
-			var debouncedScrollSnap = _.debounce(_.bind(this.scrollSnap, this),150);
-			var throttledResize = _.throttle(_.bind(this.onResize,this),200);
+			_.bindAll(this, 'scrollSnap', 'onResize', 'onKeydown', 'onKeypress', 'onPaste', 'scrollToBottom', 'send', 'appMessage');
+			var debouncedScrollSnap = _.debounce(this.scrollSnap,150);
+			var throttledResize = _.throttle(this.onResize,200);
+			
 			$(window).bind('scroll',debouncedScrollSnap);
 			$(window).bind('resize',debouncedScrollSnap);
 			$(window).bind('resize',throttledResize);
-			$(window).bind('keydown',_.bind(this.onKeydown,this));
-			$(window).bind('keypress',_.bind(this.onKeypress,this));
-			$(window).bind('paste',_.bind(this.onPaste,this));
-			$(window).bind('resize',_.bind(this.scrollToBottom,this));
+			$(window).bind('keydown',this.onKeydown);
+			$(window).bind('keypress',this.onKeypress);
+			$(window).bind('paste',this.onPaste);
+			$(window).bind('resize',this.scrollToBottom);
 			
 		} else {
 			return new Terminal();
@@ -76,8 +78,8 @@
 		
 		onConnect: function(termId, stdin){			
 			TermJS.setStdin(stdin);
-			this.term.send = _.bind(this.send,this);
-			this.term.appMessage = _.bind(this.appMessage,this);
+			this.term.send = this.send;
+			this.term.appMessage = this.appMessage;
 			this.term.bell = this.bell;
 			this.sendMessage("init",{"id":termId,"rows":this.getMaxRows(),"cols":this.getMaxCols()});
 			$('.loading-container').hide();
