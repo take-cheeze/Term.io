@@ -31,7 +31,10 @@ function startServer(config){
 	}
 
 	server.listen(config.port);
-	var io = socketio.listen(server, {log: function(){}});
+	var io = socketio.listen(server);
+	io.configure(function(){
+		io.set('log level',0);
+	})
 	server.use(function(req, res, next){
 		if (req.url === '/') {
 			res.writeHead(302, { 'Location': '/'+(_.size(termSessions) + 1) });
