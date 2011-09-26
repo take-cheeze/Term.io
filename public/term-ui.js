@@ -64,8 +64,6 @@
 		},
 		
 		input: function(data){
-            if(data === undefined) { return; }
-
 			this.lastMessageType = INPUT;
 			this.sendMessage("input",data);
 		},
@@ -109,11 +107,14 @@
 				window.open(location.href);
 			} else if (ctrlShift && e.which === 87) { // Ctrl Shift w to close tab
 				window.close();
-			} else if(!mods) {
+            } else if (e.which === 8) { // BackSpace
+                this.input(String.fromCharCode(0x7f));
+            } else if (e.which === 9) { // Tab
+                this.input(String.fromCharCode(9));
+            } else if (e.which === 27) { // Esc
+                this.input(String.fromCharCode(27));
+			} else {
                 var key =
-                    (e.which === 8)? String.fromCharCode(0x7f): // BackSpace
-                    (e.which === 9)? String.fromCharCode(9): // Tab
-                    (e.which === 27)? String.fromCharCode(27): // Esc
                     (e.which === 33)? CSISeq + '5~': // Page Up
                     (e.which === 34)? CSISeq + '6~': // Page Down
                     (e.which === 35)? SS3Seq + 'F' : // End
@@ -126,8 +127,20 @@
                     (e.which === 46)? CSISeq + '3~': // Forward Backspace
                     undefined;
                 if(key === undefined) { return; }
-                else { this.input(key); }
-            } else { return; }
+
+                var m, mod_val = 1 +
+                    (e.shiftKey? 1 : 0) +
+                    (e.  altKey? 2 : 0) +
+                    (e. ctrlKey? 4 : 0) ;
+                if(mod_val > 1) {
+                    (m = key.match(/^(\u001B\[\d*)(.+)$/))?
+                        (key = m[1] + (m[1].length > 2? ';' : '') + mod_val.toString() + m[2]):
+                    (m = key.match(/^(\u001BO)(.+)$/))?
+                        (key = m[1] + mod_val.toString() + m[2]):
+                        (function() {})();
+                }
+                this.input(key);
+            }
 			// event was handled
 			return false;
 		},
