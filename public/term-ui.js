@@ -64,6 +64,8 @@
 		},
 		
 		input: function(data){
+            if(data === undefined) { return; }
+
 			this.lastMessageType = INPUT;
 			this.sendMessage("input",data);
 		},
@@ -100,25 +102,32 @@
 			var SS3Seq = '\u001BO';
 			var CSISeq = '\u001B[';
 			var arrowSeq = this.term.flags.appCursorKeys ? SS3Seq : CSISeq;
-			if (!mods && (e.which === 8 || e.which === 9 || e.which === 27)) { //backspace tab esc
-				this.input(String.fromCharCode(e.which));
-			} else if (!mods && e.which === 37) { // Left arrow
-				this.input(arrowSeq+'D');
-			} else if (!mods && e.which === 38) { // Up arrow
-				this.input(arrowSeq+'A');
-			} else if (!mods && e.which === 39) { // Right arrow
-				this.input(arrowSeq+'C');
-			} else if (!mods && e.which === 40) { // Down arrow
-				this.input(arrowSeq+'B');
-			} else if (onlyCtrl && e.which >= 65 && e.which <= 90) { // make Ctrl + A-Z work for lowercase
+
+			if (onlyCtrl && e.which >= 65 && e.which <= 90) { // make Ctrl + A-Z work for lowercase
 				this.input(String.fromCharCode(e.which - 64));
 			} else if (ctrlShift && e.which === 84) { // Ctrl Shift t to open  new tab
 				window.open(location.href);
 			} else if (ctrlShift && e.which === 87) { // Ctrl Shift w to close tab
 				window.close();
-			} else {
-				return;
-			}
+			} else if(!mods) {
+                var key =
+                    (e.which === 8)? String.fromCharCode(0x7f): // BackSpace
+                    (e.which === 9)? String.fromCharCode(9): // Tab
+                    (e.which === 27)? String.fromCharCode(27): // Esc
+                    (e.which === 33)? CSISeq + '5~': // Page Up
+                    (e.which === 34)? CSISeq + '6~': // Page Down
+                    (e.which === 35)? SS3Seq + 'F' : // End
+                    (e.which === 36)? SS3Seq + 'H' : // Home
+			        (e.which === 37)? arrowSeq + 'D': // Left arrow
+			        (e.which === 38)? arrowSeq + 'A': // Up arrow
+			        (e.which === 39)? arrowSeq + 'C': // Right arrow
+			        (e.which === 40)? arrowSeq + 'B': // Down arrow
+                    (e.which === 45)? CSISeq + '2~': // Insert
+                    (e.which === 46)? CSISeq + '3~': // Forward Backspace
+                    undefined;
+                if(key === undefined) { return; }
+                else { this.input(key); }
+            } else { return; }
 			// event was handled
 			return false;
 		},
