@@ -12,11 +12,11 @@ require.paths.push(__dirname+"/public");
 require.paths.push(__dirname+"/lib");
 var TerminalSession = require('TerminalSession.js').TerminalSession;
 
-var command = 'python';
-var commandArgs = ['-c', 'import pty;pty.spawn(["bash","-l"])'];
-
 
 function startServer(config){
+
+    var command = 'python';
+    var commandArgs = ['-c', 'import pty;pty.spawn(["' + config.shell + '","-l"])'];
 
 	var server;
 	var termSessions = {};
@@ -34,7 +34,7 @@ function startServer(config){
 	var io = socketio.listen(server);
 	io.configure(function(){
 		io.set('log level',0);
-	})
+	});
 	server.use(function(req, res, next){
 		if (req.url === '/') {
 			res.writeHead(302, { 'Location': '/'+(_.size(termSessions) + 1) });
