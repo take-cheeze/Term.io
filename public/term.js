@@ -358,12 +358,16 @@
 			} else if (command === 'c'){ //Send device attributes
 				// VT100 with Advanced Video Option (a common term identifier)
 				this.send('\u001B[?1;2c');
+            } else if (command === 'd') {
+                this.setCursor({x: 0, y: this.toLineCoords(parseInt(args[0]))});
 			} else if (command === 'h') { //Set Mode
 				arg = args[0];
 				if(arg === '4'){ //Insert mode
 					this.flags.insertMode = true;
 				} else if(arg === '?1'){ //App Cursor Keys
 					this.flags.appCursorKeys = true;
+                // } else if (arg === '?7') { //Wraparound mode
+                // } else if (arg === '?12') { //Start Blinking Cursor
 				} else if (arg === '?25') { //Cursor Visible
 					this.cursor.visible = true;
 				} else if(arg === '?47'){	//Alternate screen buffer
@@ -380,6 +384,8 @@
 					this.flags.insertMode = false;
 				} else if(arg === '?1'){ //Normal Cursor Keys
 					this.flags.appCursorKeys = false;
+                // } else if (arg === '?7') { //No Wraparound mode
+                // } else if (arg === '?12') { //Stop Blinking Cursor
 				} else if (arg === '?25') { //Cursor invisible
 					this.cursor.visible = false;
 				} else if (arg === '?47'){ //Normal Screen buffer
