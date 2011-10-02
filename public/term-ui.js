@@ -387,6 +387,7 @@
 
 		stopCursorBlinking: function() {
 			window.clearInterval(this.cursorBlink);
+			$('#' + this.cursorId).removeClass().addClass(this.attrToClass(this.cursorAttr));
 		},
 
 		numberOfLines: function() {
