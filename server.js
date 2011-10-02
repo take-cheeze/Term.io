@@ -38,8 +38,8 @@ function startServer(config){
         io.set('heartbeat interval', 10);
         io.set('transports', [
                  'websocket'
-               , 'xhr-polling'
                , 'htmlfile'
+               , 'xhr-polling'
                , 'jsonp-polling'
                ]);
     });
@@ -77,16 +77,6 @@ function startServer(config){
 					termSessions[id] = new TerminalSession(command, commandArgs, termSessions, msg.data);
 				}
 				termSessions[id].newClient(client);
-                /*
-                client.termSession.termProcess.on(
-                    'exit', function() {
-                        client.emit('disconnect');
-                        if(!('termSession' in client)) { return; }
-
-			            client.termSession.clientDisconnect(client);
-			            console.log(client.termSession.id + ': connection closed ('+client.termSession.clients.length+' connected)');
-                    });
-                 */
                 break;
             case 'log':
             case 'error':
@@ -101,9 +91,6 @@ function startServer(config){
 	
 		client.on('disconnect', function(){
             if(!('termSession' in client)) { return; }
-
-			client.termSession.clientDisconnect(client);
-			console.log(client.termSession.id + ': connection closed ('+client.termSession.clients.length+' connected)');
 		});
 	
 	});
