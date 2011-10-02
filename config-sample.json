@@ -1,6 +1,7 @@
 {
     "port": 8080,
     "shell": "bash",
+    "save_session": false,
     "ssl": {
         "on": false,
         "keyPath": "ssl/privatekey.pem",

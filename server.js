@@ -14,6 +14,8 @@ var TerminalSession = require('TerminalSession.js').TerminalSession;
 
 
 function startServer(config){
+    global.config = config;
+
     var command = 'python';
     var commandArgs = ['-c', 'import pty;pty.spawn(["' + config.shell + '","-l"])'];
 
@@ -45,7 +47,14 @@ function startServer(config){
     });
 	server.use(function(req, res, next){
 		if (req.url === '/') {
-			res.writeHead(302, { 'Location': '/'+(_.size(termSessions) + 1) });
+			res.writeHead(302, { 'Location': '/'+
+                                 (function(input) {
+                                      for(var i in input) {
+                                          if(config.save_session && input[i] !== undefined) return i;
+                                          if(input[i] === undefined) return i;
+                                      }
+                                      return _(termSessions).size() + 1;
+                                  })(termSessions) });
 			res.end();
 	    } else {
 			next();
@@ -60,7 +69,6 @@ function startServer(config){
 	server.use(connect['static'](__dirname + '/public'));
 
 	io.sockets.on('connection', function(client){
-	
 		client.on('message', function(msgText){
             try {
 			    var msg = JSON.parse(msgText);
