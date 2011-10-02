@@ -23,7 +23,6 @@
 			this.cursorAttr = 0;
 			this.stylesheetId = 'terminal-css';
 			this.cursorBlink = undefined;
-			this.stdin = $.noop;
 			this.colors = null;
 			this.lastScrollTop = null;
 			this.lastScrollSnap = null;
@@ -49,7 +48,8 @@
 			$(window).bind('keypress',this.onKeypress);
 			$(window).bind('paste',this.onPaste);
 			$(window).bind('resize',this.scrollToBottom);
-			
+
+		    return this;
 		} else {
 			return new Terminal();
 		}
@@ -58,10 +58,6 @@
 	Terminal.prototype = {
 		
 		constructor: Terminal,
-		
-		setStdin: function(fn) {
-			this.stdin = fn;
-		},
 		
 		input: function(data){
 			this.lastMessageType = INPUT;
@@ -76,9 +72,25 @@
 			document.getElementById('beep').play(3);
 		},
 		
-		onConnect: function(termId, stdin){			
-			TermJS.setStdin(stdin);
+		onConnect: function(termId, socket){
+            var self = this;
+
+            this.socket = socket;
+            this.socket.on('message', function(data) {
+                               self.handleMessage(data); });
+            this.socket.on('disconnect',function() {
+                               self.onDisconnect(); });
+
+			this.charHeight = this.charHeight ||
+                $('#'+this.g).find('div:first').innerHeight();
+			this.charWidth = this.charWidth ||
+                $('#'+this.cursorId).innerWidth();
+	
 			this.term.send = this.send;
+			// this.term.debug = this.sendMessage; // for device like kindle
+            this.term.blinkCursor = function(b) {
+                b? self.startCursorBlinking() : self.stopCursorBlinking();
+            };
 			this.term.appMessage = this.appMessage;
 			this.term.bell = this.bell;
 			this.sendMessage("init",{"id":termId,"rows":this.getMaxRows(),"cols":this.getMaxCols()});
@@ -86,7 +98,7 @@
 		},
 		
 		onDisconnect: function(){
-			this.setStdin($.noop);
+			delete this.socket;
 			$('.loading-container').show();
 		},
 		
@@ -147,7 +159,7 @@
 		
 		onKeypress: function(e) {
 			if( document.activeElement !== document.body){
-				return;
+				return undefined;
 			}
 			this.input(String.fromCharCode(e.which));
 			return false;
@@ -292,7 +304,7 @@
 			}
 		},
 
-		render: function(iterator) {
+		render: function() {
 			var toRender;
 			if(this.term.redrawAll){
 				toRender = _.range(this.term.grid.length);
@@ -311,7 +323,7 @@
 					var html = '';
 					var j;
 					for (j = 0; j < missingLines; j++) {
-						html += '<div></div>';
+						html += '<div />';
 						this.numLines++;
 					}
 					this.$termdiv.append(html);
@@ -320,9 +332,8 @@
 				if (missingLines === 1){
 					this.$termdiv.append($div);
 					this.numLines++;
-				} else {					
-					$div = this.$termdiv.children().eq(lineNo);
-					$div.empty();
+				} else {
+					$div = this.$termdiv.children().eq(lineNo).empty();
 				}
 				this.renderLineAsHtml(lineNo,$div);
 			}
@@ -363,7 +374,7 @@
 		startCursorBlinking: function() {
 			this.stopCursorBlinking();
 			var cursor = $('#' + this.cursorId);
-			var cursorClass = this.attrToClass( this.cursorAttr);
+			var cursorClass = this.attrToClass(this.cursorAttr);
 			var invClass = this.attrToClass(this.cursorAttr ^ 0x200);
 			this.cursorBlink = window.setInterval(function() {
 				if(cursor.attr('class') === cursorClass){
@@ -385,23 +396,8 @@
 			return this.numLines;
 		},
 
-		characterWidth: function() {
-			return 7;
-			// // TODO make work before terminal is initialized
-			// if (!this.charWidth) {
-			//	this.charWidth = $('#'+this.cursorId).innerWidth();
-			// }
-			// return this.charWidth;
-		},
-
-		characterHeight: function() {
-			return 14;
-			// // TODO make work before terminal is initialized
-			// if (!this.charHeight) {
-			//	this.charHeight = $('#'+this.g).find('div:first').innerHeight();
-			// }
-			// return this.charHeight;
-		},
+		characterWidth: function() { return this.charWidth; },
+		characterHeight: function() { return this.charHeight; },
 
 		getMaxCols: function() {
 			return Math.floor(this.$scrollingElt.width() / this.characterWidth());
@@ -430,11 +426,13 @@
 		
 		sendMessage: function(method, data){
 			var msg = {"method":method, "data":data};
-			this.stdin(JSON.stringify(msg));
+            if('socket' in this) {
+                this.socket.send($.toJSON(msg));
+            }
 		},
 		
 		handleMessage: function(msgText){
-			var msg = JSON.parse(msgText);
+			var msg = $.evalJSON(msgText);
 			if( !("method" in msg) || !("data" in msg)){
 				return;
 			}

@@ -14,7 +14,6 @@ var TerminalSession = require('TerminalSession.js').TerminalSession;
 
 
 function startServer(config){
-
     var command = 'python';
     var commandArgs = ['-c', 'import pty;pty.spawn(["' + config.shell + '","-l"])'];
 
@@ -33,8 +32,17 @@ function startServer(config){
 	server.listen(config.port);
 	var io = socketio.listen(server);
 	io.configure(function(){
-		io.set('log level',0);
-	});
+        // io.disable('Logger');
+        io.enable('force new connection');
+		io.set('log level', -1);
+        io.set('heartbeat interval', 10);
+        io.set('transports', [
+                 'websocket'
+               , 'xhr-polling'
+               , 'htmlfile'
+               , 'jsonp-polling'
+               ]);
+    });
 	server.use(function(req, res, next){
 		if (req.url === '/') {
 			res.writeHead(302, { 'Location': '/'+(_.size(termSessions) + 1) });
@@ -54,24 +62,48 @@ function startServer(config){
 	io.sockets.on('connection', function(client){
 	
 		client.on('message', function(msgText){
-			var msg = JSON.parse(msgText);
+            try {
+			    var msg = JSON.parse(msgText);
+            } catch(e) {
+                console.error('ILLEGAL Message: ' + msgText);
+                console.error(e);
+                return;
+            }
 
-			if(msg.method === "init"){
+			switch(msg.method) {
+            case "init":
 				var id = msg.data.id;
 				if(!(id in termSessions)){
 					termSessions[id] = new TerminalSession(command, commandArgs, termSessions, msg.data);
 				}
 				termSessions[id].newClient(client);
-				// console.log(id + ': connection open (' + termSessions[id].clients.length + ' connected)');
-			}
-			else{
+                /*
+                client.termSession.termProcess.on(
+                    'exit', function() {
+                        client.emit('disconnect');
+                        if(!('termSession' in client)) { return; }
+
+			            client.termSession.clientDisconnect(client);
+			            console.log(client.termSession.id + ': connection closed ('+client.termSession.clients.length+' connected)');
+                    });
+                 */
+                break;
+            case 'log':
+            case 'error':
+            case 'warn':
+                console[msg.method](msg.data);
+                break;
+            default:
 				client.termSession.handleMessage(client, msg);
+                break;
 			}
 		});
 	
 		client.on('disconnect', function(){
+            if(!('termSession' in client)) { return; }
+
 			client.termSession.clientDisconnect(client);
-			// console.log(client.termSession.id + ': connection closed ('+client.termSession.clients.length+' connected)');		
+			console.log(client.termSession.id + ': connection closed ('+client.termSession.clients.length+' connected)');
 		});
 	
 	});

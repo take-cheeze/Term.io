@@ -3,7 +3,7 @@ TermJS.plugins.notify = {
 		var request = function(){
 			window.webkitNotifications.requestPermission();
 			$(window).unbind('keydown',request);
-		}
+		};
 		if (window.webkitNotifications.checkPermission() > 0) {
 			$(window).keydown(request);
 		}
@@ -12,4 +12,4 @@ TermJS.plugins.notify = {
 	notify: function(data){
 		window.webkitNotifications.createHTMLNotification('data:text/html,'+data.data).show();
 	}
-}
+};

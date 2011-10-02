@@ -14,41 +14,16 @@
 			<param name="movie" value="flashbeep-general.swf" />
 			<param name="FlashVars" value="onLoad=isReady" />
 		</object>
+
 		<script src='lib/jquery-1.6.1.min.js'></script>
+		<script src='lib/jquery.json-2.3.min.js'></script>
 		<script src='lib/underscore-min.js'></script>
-		<script src="/socket.io/socket.io.js"></script>
+		<script src='/socket.io/socket.io.js'></script>
 		<script src='term.js'></script>
 		<script src='term-ui.js'></script>
 		<script src='plugins/notify.js'></script>
 		<script src='plugins/textarea.js'></script>
 		<script src='plugins/imshow.js'></script>
-		<script>
-			$(function() {
-				"use strict";
-				var socket = io.connect();
-
-				socket.on('connect', function(){
-					TermJS.onConnect(location.pathname,function(data){socket.send(data);});
-				});
-				
-				socket.on('message', function(data){
-				    TermJS.handleMessage(data);
-				});
-				
-				socket.on('disconnect',function() {
-					TermJS.onDisconnect();
-				});
-				
-				TermJS.theme(TermJS.themes['Terminal.app']);
-				
-			/*
-				// Simple echo terminal
-				TermJS.output('\r\n> ');
-				TermJS.setStdin( function(data) {
-					TermJS.output(data.replace('\r', '\r\n> ').replace('\b', '\b \b'));
-				});
-			*/
-			});
-		</script>
+		<script src='main.js'></script>
 	</body>
 </html>

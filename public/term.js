@@ -10,6 +10,7 @@
 			// Ui specific / temporary vars
 			this.bell = function(){};
 			this.send = function(){};
+            this.blinkCursor = function(b) {};
             this.appMessage = function(){};
 			this.redrawAll = false;
 			this.debugOn = true;
@@ -30,6 +31,7 @@
 							alternateScreenBuffer: false,
 							insertMode: false,
 							appKeypad: false};
+            return this;
 		} else {
 			return new Term();
 		}
@@ -162,7 +164,7 @@
 		
 		setCursor: function(newPosition) {
 			var newYScreenCoords = newPosition.y - this.windowFirstLine() + 1;
-			if(this.flags.specialScrollRegion && this.scrollRegion[1] < newYScreenCoords){			
+			if(this.flags.specialScrollRegion && this.scrollRegion[1] < newYScreenCoords){
 				this.deleteLines(1);
 			} else if(this.flags.specialScrollRegion && this.scrollRegion[0] > newYScreenCoords){
 				this.debug('warn',"specialScrollRegion: Not Implemented "+this.scrollRegion+newYScreenCoords);
@@ -225,8 +227,7 @@
 			var blanks = this.blankLines(num);
 			var g = this.grid;
 			this.grid = g.slice(0,scrollTop).concat(g.slice(scrollTop + num, scrollBotton + 1),blanks,g.slice(scrollBotton + 1));
-			var y;
-			for (y = scrollTop; y <= scrollBotton; y++) {
+			for (var y = scrollTop; y <= scrollBotton; y++) {
 				this.dirtyLines[y] = true;
 			}
 		},
@@ -237,8 +238,7 @@
 			var blanks = this.blankLines(num);
 			var g = this.grid;
 			this.grid = g.slice(0,scrollTop).concat(blanks,g.slice(scrollTop,scrollBotton),g.slice(scrollBotton + 1));
-			var line;
-			for (line = scrollTop; line <= scrollBotton; line++) {
+			for (var line = scrollTop; line <= scrollBotton; line++) {
 				this.dirtyLines[line] = true;
 			}
 		},
@@ -315,19 +315,20 @@
 				var firstLine  = this.windowFirstLine();
 				var lastLine   = Math.min(firstLine + this.rows, this.grid.length) - 1;
 				var cursorLine = this.cursor.y;
-				if (arg === 1) { // Erase Above
+                if (arg === 0) { // 0 : Erase Below (default)
+                    firstLine = cursorLine + 1;
+				} else if (arg === 1) { // Erase Above
 					lastLine  = firstLine + this.rows - 1;
 					firstLine = cursorLine;
 				} else if (arg !== 2) {	// Erase All
 					lastLine = cursorLine;
-				} else {		// 0 : Erase Below (default) , 3: Erase Saved Lines (xterm)
+				} else { // 3: Erase Saved Lines (xterm)
 					firstLine = lastLine;
 					lastLine  = firstLine + this.rows - 1;
 					this.setCursor({ y: firstLine });
 				}
 				var emptyLine = this.emptyLineArray(this.cols);
-				var y;
-				for (y = firstLine; y <= lastLine; y++) {
+				for (var y = firstLine; y <= lastLine; y++) {
 					this.grid[y] = emptyLine.slice(0);
 					this.dirtyLines[y] = true;
 				}
@@ -339,7 +340,7 @@
 					this.grid[this.cursor.y] = [];
 				} else { // Erase to Right (default)
 					if (arg !== 0) {
-						this.debug('warn','Unknown argument for CSI "K": ' + arg);
+						this.debug('warn','Unknown argument for CSI "K": ' + JSON.stringify(arg));
 					}
 					this.grid[this.cursor.y] = line.slice(0, this.cursor.x);
 				}
@@ -367,7 +368,8 @@
 				} else if(arg === '?1'){ //App Cursor Keys
 					this.flags.appCursorKeys = true;
                 // } else if (arg === '?7') { //Wraparound mode
-                // } else if (arg === '?12') { //Start Blinking Cursor
+                } else if (arg === '?12') { //Start Blinking Cursor
+                    this.blinkCursor(true);
 				} else if (arg === '?25') { //Cursor Visible
 					this.cursor.visible = true;
 				} else if(arg === '?47'){	//Alternate screen buffer
@@ -385,7 +387,8 @@
 				} else if(arg === '?1'){ //Normal Cursor Keys
 					this.flags.appCursorKeys = false;
                 // } else if (arg === '?7') { //No Wraparound mode
-                // } else if (arg === '?12') { //Stop Blinking Cursor
+                } else if (arg === '?12') { //Stop Blinking Cursor
+                    this.blinkCursor(false);
 				} else if (arg === '?25') { //Cursor invisible
 					this.cursor.visible = false;
 				} else if (arg === '?47'){ //Normal Screen buffer
@@ -438,7 +441,7 @@
 						this.cursor.attr &= ~0x00F0;
 						this.cursor.attr |= 8 << 4;
 					} else {
-						this.debug('warn','Unhandled escape code CSI argument for "m": ' + arg);
+						this.debug('warn','Unhandled escape code CSI argument for "m": ' + JSON.stringify(arg));
 					}
 				}
 			} else if (command === 'r'){ //Set scrolling region (vi)
@@ -454,8 +457,14 @@
 					this.flags.specialScrollRegion = true;
 					this.scrollRegion = [topRow,botRow];
 				}
+            } else if (command === 'X') {
+                var target = this.grid[this.cursor.y];
+                for(var i = this.cursor.x; i < Math.min(target.length, this.cursor.x + this.parseArg(args[0], 1)); ++i) {
+                    target[i] = [0, 0];
+                }
+                this.dirtyLines[this.cursor.y] = true;
 			} else {
-				this.debug('warn','Unhandled escape code CSI ' + command + ' ' + JSON.stringify(args));
+				this.debug('warn','Unhandled escape code CSI ' + command + ' ' + JSON.stringify(arg));
 			}
 		},
 		
@@ -465,7 +474,7 @@
 				// TODO: update document.title in ui
 				this.title = value;
 			} else if (number === 99) {
-				var data = JSON.parse(value);
+				var data = $.evalJSON(value);
                 this.appMessage(data);
 			} else {
 				this.debug('warn','Unhandled escape code OSC ' + number);
@@ -479,7 +488,7 @@
 			if(typeof text === 'string'){
 				var esc = String.fromCharCode(9243);
 				text = text.replace(/\u001B/g,esc);
-				text = JSON.stringify(text);
+				text = $.toJSON(text);
 			}
 			console[method](text);
 		},
