@@ -1,8 +1,7 @@
 $(function() {
       "use strict";
 
-      JSON.stringify = $.toJSON;
-      JSON.parse = $.evalJSON;
+      JSON = { stringify: $.toJSON, parse: $.evalJSON };
 
       var socket = io.connect();
       socket.on('connect', function(){
