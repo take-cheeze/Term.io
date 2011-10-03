@@ -428,12 +428,12 @@
 		sendMessage: function(method, data){
 			var msg = {"method":method, "data":data};
             if('socket' in this) {
-                this.socket.send($.toJSON(msg));
+                this.socket.send(JSON.stringify(msg));
             }
 		},
 		
 		handleMessage: function(msgText){
-			var msg = $.evalJSON(msgText);
+			var msg = JSON.parse(msgText);
 			if( !("method" in msg) || !("data" in msg)){
 				return;
 			}

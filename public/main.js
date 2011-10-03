@@ -1,6 +1,9 @@
 $(function() {
       "use strict";
 
+      JSON.stringify = $.toJSON;
+      JSON.parse = $.evalJSON;
+
       var socket = io.connect();
       socket.on('connect', function(){
                     TermJS.onConnect(location.pathname, socket);

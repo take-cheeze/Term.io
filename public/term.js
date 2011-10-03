@@ -474,7 +474,7 @@
 				// TODO: update document.title in ui
 				this.title = value;
 			} else if (number === 99) {
-				var data = $.evalJSON(value);
+				var data = JSON.parse(value);
                 this.appMessage(data);
 			} else {
 				this.debug('warn','Unhandled escape code OSC ' + number);
@@ -488,7 +488,7 @@
 			if(typeof text === 'string'){
 				var esc = String.fromCharCode(9243);
 				text = text.replace(/\u001B/g,esc);
-				text = $.toJSON(text);
+				text = JSON.stringify(text);
 			}
 			console[method](text);
 		},
